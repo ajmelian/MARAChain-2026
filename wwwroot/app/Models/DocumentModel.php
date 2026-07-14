@@ -289,6 +289,9 @@ class DocumentModel extends Model
      */
     public function createNewVersion(Document $document, array $data): Document
     {
+        // Transaction to prevent TOCTOU on version number
+        $this->db->transStart();
+
         $row = $this->db->table($this->table)
             ->where('id', $document->id)
             ->get()
@@ -307,7 +310,11 @@ class DocumentModel extends Model
             'status'         => 'DRAFT',
         ];
 
-        return $this->create($newData);
+        $newDocument = $this->create($newData);
+
+        $this->db->transComplete();
+
+        return $newDocument;
     }
 
     /**

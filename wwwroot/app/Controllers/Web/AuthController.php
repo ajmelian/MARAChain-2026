@@ -104,6 +104,9 @@ class AuthController extends BaseWebController
             $this->updateLastLogin($shieldUserId);
         }
 
+        // ── Regenerate session to prevent fixation ────────────────
+        session()->regenerate(true);
+
         return redirect()->to(config('Auth')->loginRedirect())
             ->with('message', 'Inicio de sesion exitoso.');
     }
@@ -217,7 +220,8 @@ class AuthController extends BaseWebController
                 ->with('error', 'No se pudo completar el registro. Por favor, intentalo de nuevo.');
         }
 
-        // ── Step 4: Auto-login ───────────────────────────────────
+        // ── Step 4: Regenerate session and auto-login ─────────────
+        session()->regenerate(true);
         auth()->login($shieldUser);
 
         // ── Step 5: Record evidence ──────────────────────────────

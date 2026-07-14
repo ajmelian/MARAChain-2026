@@ -229,25 +229,7 @@ class TransfersController extends BaseWebController
         $data = $mockData[$id] ?? null;
 
         if ($data === null) {
-            // Transferencia no encontrada — mostrar pagina de error
-            $viewContent = '<?php $this->extend("layouts/main"); ?>'
-                . '<?php $this->section("content"); ?>'
-                . '<div class="block-header">'
-                . '    <h2>Transferencia no encontrada</h2>'
-                . '</div>'
-                . '<div class="card">'
-                . '    <div class="body text-center">'
-                . '        <i class="zmdi zmdi-alert-circle" style="font-size: 64px; color: #f44336;"></i>'
-                . '        <h4 class="m-t-20">La transferencia solicitada no existe</h4>'
-                . '        <p class="text-muted">El identificador proporcionado no corresponde a ninguna transferencia.</p>'
-                . '        <a href="/transfers/inbox" class="btn btn-primary btn-round m-t-10">'
-                . '            <i class="zmdi zmdi-arrow-back"></i> Volver a recibidos'
-                . '        </a>'
-                . '    </div>'
-                . '</div>'
-                . '<?php $this->endSection(); ?>';
-
-            return view('string:' . $viewContent, [
+            return $this->render('transfers/not_found', [
                 'title'   => 'Transferencia no encontrada',
                 'current' => 'inbox',
             ]);
@@ -255,7 +237,6 @@ class TransfersController extends BaseWebController
 
         $transfer = new DocumentTransfer($data);
 
-        // Mapa de etiquetas de estado en espanol
         $statusLabels = [
             'PENDING_RECIPIENT' => 'Pendiente',
             'READY'             => 'Listo',
@@ -273,61 +254,24 @@ class TransfersController extends BaseWebController
 
         $statusLabel = $statusLabels[$transfer->status] ?? $transfer->status;
 
-        $viewContent = '<?php $this->extend("layouts/main"); ?>'
-            . '<?php $this->section("content"); ?>'
-            . '<div class="block-header">'
-            . '    <div class="row clearfix">'
-            . '        <div class="col-lg-5 col-md-5 col-sm-12">'
-            . '            <h2>Detalle de transferencia</h2>'
-            . '        </div>'
-            . '        <div class="col-lg-7 col-md-7 col-sm-12">'
-            . '            <ul class="breadcrumb float-md-right padding-0">'
-            . '                <li class="breadcrumb-item"><a href="/"><i class="zmdi zmdi-home"></i></a></li>'
-            . '                <li class="breadcrumb-item"><a href="/transfers/inbox">Recibidos</a></li>'
-            . '                <li class="breadcrumb-item active">Detalle</li>'
-            . '            </ul>'
-            . '        </div>'
-            . '    </div>'
-            . '</div>'
-            . '<div class="row clearfix">'
-            . '    <div class="col-lg-12">'
-            . '        <div class="card">'
-            . '            <div class="header">'
-            . '                <h2><strong>Informacion</strong> de la transferencia</h2>'
-            . '            </div>'
-            . '            <div class="body">'
-            . '                <div class="row">'
-            . '                    <div class="col-md-6">'
-            . '                        <dl class="row">'
-            . '                            <dt class="col-sm-4">ID:</dt>'
-            . '                            <dd class="col-sm-8"><code>' . esc($transfer->id) . '</code></dd>'
-            . '                            <dt class="col-sm-4">Estado:</dt>'
-            . '                            <dd class="col-sm-8"><span class="badge badge-info">' . esc($statusLabel) . '</span></dd>'
-            . '                            <dt class="col-sm-4">Remitente:</dt>'
-            . '                            <dd class="col-sm-8"><code>' . esc($transfer->senderId) . '</code></dd>'
-            . '                            <dt class="col-sm-4">Destinatario:</dt>'
-            . '                            <dd class="col-sm-8"><code>' . esc($transfer->recipientId) . '</code></dd>'
-            . '                            <dt class="col-sm-4">Documento:</dt>'
-            . '                            <dd class="col-sm-8"><code>' . esc($transfer->documentId) . '</code></dd>'
-            . '                            <dt class="col-sm-4">Creado:</dt>'
-            . '                            <dd class="col-sm-8">' . esc($transfer->createdAt) . '</dd>'
-            . '                        </dl>'
-            . '                    </div>'
-            . '                </div>'
-            . '                <div class="m-t-20">'
-            . '                    <a href="/transfers/inbox" class="btn btn-simple btn-round waves-effect">'
-            . '                        <i class="zmdi zmdi-arrow-back"></i> Volver a recibidos'
-            . '                    </a>'
-            . '                </div>'
-            . '            </div>'
-            . '        </div>'
-            . '    </div>'
-            . '</div>'
-            . '<?php $this->endSection(); ?>';
+        $badgeMap = [
+            'AVAILABLE' => 'badge-info',
+            'ACCESSED'  => 'badge-primary',
+            'DOWNLOADED'=> 'badge-success',
+            'ACCEPTED'  => 'badge-success',
+            'REJECTED'  => 'badge-danger',
+            'EXPIRED'   => 'badge-warning',
+            'REVOKED'   => 'badge-dark',
+            'FAILED'    => 'badge-danger',
+        ];
+        $badgeClass = $badgeMap[$transfer->status] ?? 'badge-secondary';
 
-        return view('string:' . $viewContent, [
-            'title'   => 'Detalle de transferencia',
-            'current' => 'inbox',
+        return $this->render('transfers/detail', [
+            'title'       => 'Transferencia ' . esc($id),
+            'current'     => 'inbox',
+            'transfer'    => $data,
+            'statusLabel' => $statusLabel,
+            'badgeClass'  => $badgeClass,
         ]);
     }
 }

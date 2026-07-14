@@ -93,6 +93,9 @@ class FnmtController extends BaseWebController
             );
         }
 
+        // ── Regenerate session to prevent session fixation ─────────
+        session()->regenerate(true);
+
         $taxIdHmac = hash_hmac('sha256', $taxId, $hmacKey);
 
         // ── Step 2: Find or create custom user identity ──────────
@@ -290,6 +293,9 @@ class FnmtController extends BaseWebController
 
         // ── Reset failures on success ────────────────────────────
         $this->userModel->resetTotpFailures($user);
+
+        // ── Regenerate session to prevent fixation ────────────────
+        session()->regenerate(true);
 
         // ── Create SHIELD session for the user ───────────────────
         $this->createShieldSessionForUser($user);

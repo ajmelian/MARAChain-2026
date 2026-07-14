@@ -4,57 +4,79 @@ declare(strict_types=1);
 
 namespace App\Controllers\Web;
 
-use App\Entities\Device;
-use App\Entities\User;
+use App\Models\DeviceModel;
+use App\Models\UserModel;
 
 /**
- * ProfileController — Controlador web para el perfil de usuario.
+ * ProfileController — User profile with real SHIELD data.
  *
- * Muestra la informacion del perfil del usuario autenticado, incluyendo
- * datos personales, nivel de garantia eIDAS, estado TOTP y dispositivos activos.
- *
- * En fase MVP usa los metodos mockUser() y mockDevices() de BaseWebController,
- * convirtiendo los arrays a entidades User y Device para compatibilidad con las vistas.
+ * Displays user identity, TOTP status, active sessions/devices,
+ * and eIDAS guarantee level.
  *
  * @package App\Controllers\Web
  * @author  Aythami
- * @since   1.2.0
+ * @since   1.3.0
  */
 class ProfileController extends BaseWebController
 {
     /**
-     * GET /profile — Muestra la pagina de perfil del usuario.
+     * GET /profile — Show authenticated user's profile.
      *
-     * Renderiza la vista profile/index con los datos del usuario autenticado
-     * y sus dispositivos activos.
+     * @return string Rendered HTML
      *
-     * @return string HTML renderizado con el perfil
-     *
-     * @since 1.2.0
+     * @since 1.3.0
      */
     public function index(): string
     {
-        // Obtener datos mock del usuario base y convertir a entidad User
-        $mockUserData = $this->mockUser();
+        $shieldUser = auth()->user();
 
-        // Anadir campos necesarios para la vista que no estan en mockUser()
-        $mockUserData['createdAt']     = '2026-06-01 10:00:00';
-        $mockUserData['lastLoginAt']   = '2026-07-13 08:30:00';
-        $mockUserData['totpFailures']  = 0;
-        $mockUserData['taxIdEncrypted'] = null;
+        if ($shieldUser === null) {
+            return $this->render('auth/login', [
+                'title'   => 'Iniciar sesion',
+                'current' => 'login',
+            ]);
+        }
 
-        $user = new User($mockUserData);
+        // ── Load custom MARAChain user profile ────────────────────
+        $userModel  = model(UserModel::class);
+        $customUser = $userModel->findByShieldUserId($shieldUser->id ?? 0);
 
-        // Obtener datos mock de dispositivos y convertir a entidades Device
-        $devices = array_map(
-            static fn (array $deviceData): Device => new Device($deviceData),
-            $this->mockDevices()
-        );
+        // ── Load devices ──────────────────────────────────────────
+        $deviceModel = model(DeviceModel::class);
+        $devices     = [];
+
+        if ($customUser !== null) {
+            $devices = $deviceModel->findByUserId($customUser->id);
+        }
+
+        // ── Build profile data ────────────────────────────────────
+        $profile = [
+            'id'              => $customUser?->id ?? '',
+            'identityType'    => $customUser?->identityType ?? 'physical',
+            'firstName'       => $customUser?->firstName ?? $shieldUser->username ?? '',
+            'lastName'        => $customUser?->lastName ?? null,
+            'legalName'       => $customUser?->legalName ?? null,
+            'email'           => $shieldUser->email ?? '',
+            'emailVerifiedAt' => $customUser?->emailVerifiedAt ?? null,
+            'phone'           => $customUser?->phone ?? null,
+            'status'          => $customUser?->status ?? 'active',
+            'guaranteeLevel'  => $customUser?->guaranteeLevel ?? 'low',
+            'totpEnabled'     => (bool) ($customUser?->totpEnabled ?? false),
+            'lastLoginAt'     => $customUser?->lastLoginAt ?? null,
+            'shieldUserId'    => $shieldUser->id ?? 0,
+            'username'        => $shieldUser->username ?? '',
+            'createdAt'       => $shieldUser->created_at
+                ? (is_string($shieldUser->created_at)
+                    ? $shieldUser->created_at
+                    : $shieldUser->created_at->format('Y-m-d H:i:s'))
+                : null,
+        ];
 
         return $this->render('profile/index', [
-            'title'   => 'Mi Perfil',
-            'user'    => $user,
-            'devices' => $devices,
+            'title'    => 'Mi Perfil',
+            'current'  => 'profile',
+            'user'     => $profile,
+            'devices'  => $devices,
         ]);
     }
 }

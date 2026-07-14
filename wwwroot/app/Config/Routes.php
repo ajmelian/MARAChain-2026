@@ -29,6 +29,8 @@ $routes->group('', ['filter' => 'session'], static function (RouteCollection $ro
 
     $routes->get('profile', 'Web\ProfileController::index');
 
+$routes->get('totp/setup', 'Web\AuthController::totpSetup');
+
     // ── Contacts (web HTML views) ──────────────────────────────────
     $routes->get('web/contacts', 'Web\ContactsController::index');
     $routes->post('web/contacts', 'Web\ContactsController::store');

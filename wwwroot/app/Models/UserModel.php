@@ -28,6 +28,7 @@ class UserModel extends Model
 
     protected $allowedFields = [
         'id',
+        'shield_user_id',
         'identity_type',
         'first_name',
         'last_name',
@@ -45,6 +46,35 @@ class UserModel extends Model
         'guarantee_level',
         'last_login_at',
     ];
+
+    /**
+     * Find a user by SHIELD user ID (auto-increment INT).
+     *
+     * @param int $shieldUserId SHIELD shield_users.id
+     *
+     * @return User|null User entity or null if not found
+     *
+     * @since 1.3.0
+     */
+    public function findByShieldUserId(int $shieldUserId): ?User
+    {
+        return $this->where('shield_user_id', $shieldUserId)->first();
+    }
+
+    /**
+     * Link a custom user to a SHIELD user.
+     *
+     * @param string $userId       UUID of the custom user
+     * @param int    $shieldUserId SHIELD shield_users.id
+     *
+     * @return bool
+     *
+     * @since 1.3.0
+     */
+    public function linkToShield(string $userId, int $shieldUserId): bool
+    {
+        return $this->update($userId, ['shield_user_id' => $shieldUserId]);
+    }
 
     /**
      * Create a new user.

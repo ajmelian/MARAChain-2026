@@ -56,6 +56,25 @@
 # encryption.key =
 
 #--------------------------------------------------------------------
+# MARACHain - Encryption & Auth keys
+#--------------------------------------------------------------------
+
+# encryption.hmacKey =      # HMAC key for tax ID lookups (64+ random chars)
+# encryption.key =           # AES-256-GCM key for TOTP secrets at rest
+
+#--------------------------------------------------------------------
+# EMAIL
+#--------------------------------------------------------------------
+
+# email.fromEmail = noreply@marachain.local
+# email.fromName  = MARAChain
+# email.protocol  = mail         # mail, sendmail, smtp
+# email.SMTPHost  = localhost
+# email.SMTPPort  = 25
+# email.SMTPUser  =
+# email.SMTPPass  =
+
+#--------------------------------------------------------------------
 # SESSION
 #--------------------------------------------------------------------
 

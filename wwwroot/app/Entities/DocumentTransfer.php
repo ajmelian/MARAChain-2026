@@ -137,10 +137,10 @@ class DocumentTransfer extends Entity
     public function allowedTransitions(): array
     {
         $transitions = [
-            'PENDING_RECIPIENT' => ['READY', 'FAILED'],
-            'READY'             => ['SENDING', 'FAILED'],
-            'SENDING'           => ['SENT', 'FAILED'],
-            'SENT'              => ['AVAILABLE', 'FAILED'],
+            'PENDING_RECIPIENT' => ['READY', 'REVOKED', 'FAILED'],
+            'READY'             => ['SENDING', 'REVOKED', 'FAILED'],
+            'SENDING'           => ['SENT', 'REVOKED', 'FAILED'],
+            'SENT'              => ['AVAILABLE', 'REVOKED', 'FAILED'],
             'AVAILABLE'         => ['ACCESSED', 'DOWNLOADED', 'EXPIRED', 'REVOKED'],
             'ACCESSED'          => ['DOWNLOADED', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'REVOKED'],
             'DOWNLOADED'        => ['ACCEPTED', 'REJECTED', 'EXPIRED', 'REVOKED'],

@@ -215,7 +215,11 @@ class DocumentTransferModel extends Model
             default   => null,
         };
 
-        $this->update($transfer->id, $updateData);
+        // Atomic guard: only update if status hasn't changed concurrently
+        $this->db->table($this->table)
+            ->where('id', $transfer->id)
+            ->where('status', $row['status'])
+            ->update($updateData);
 
         return $this->freshEntity($transfer->id);
     }
@@ -233,6 +237,17 @@ class DocumentTransferModel extends Model
      */
     public function revokeTransfer(DocumentTransfer $transfer): DocumentTransfer
     {
+        $row = $this->db->table($this->table)->where('id', $transfer->id)->get()->getRowArray();
+        $currentStatus = $row['status'] ?? $transfer->status;
+        $entity = new DocumentTransfer($row);
+
+        $allowed = $entity->allowedTransitions();
+        if (! in_array('REVOKED', $allowed, true)) {
+            throw new \RuntimeException(
+                "Transfer cannot be revoked from status {$currentStatus}."
+            );
+        }
+
         $this->update($transfer->id, [
             'status'     => 'REVOKED',
             'revoked_at' => date('Y-m-d H:i:s'),

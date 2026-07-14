@@ -221,19 +221,11 @@ class NotificationModel extends Model
      */
     public function incrementAttemptCount(string $id): Notification
     {
-        $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
-
-        if ($row === false || $row === null) {
-            throw new InvalidArgumentException(
-                "Notification with ID {$id} not found."
-            );
-        }
-
-        $newAttemptCount = (int) ($row['attempt_count'] ?? 0) + 1;
-
-        $this->update($id, [
-            'attempt_count' => $newAttemptCount,
-        ]);
+        // Atomic: SET attempt_count = attempt_count + 1
+        $this->db->table($this->table)
+            ->where('id', $id)
+            ->set('attempt_count', 'attempt_count + 1', false)
+            ->update();
 
         return $this->freshEntity($id);
     }

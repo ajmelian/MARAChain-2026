@@ -105,83 +105,88 @@ class LedgerService
      */
     public function sealBlock(string $signingKeyFingerprint): ?array
     {
-        $pendingEvidence = $this->evidenceModel->findNotInLedger();
+        // ── Transaction: block insert + evidence updates are atomic ─
+        $this->ledgerBlockModel->db->transStart();
 
-        if ($pendingEvidence === []) {
-            return null;
-        }
+        try {
+            $pendingEvidence = $this->evidenceModel->findNotInLedger();
 
-        $now = date('Y-m-d H:i:s');
+            if ($pendingEvidence === []) {
+                $this->ledgerBlockModel->db->transComplete();
 
-        // ── Merkle root from payload hashes ────────────────────────
-        $leafHashes = array_map(
-            static fn ($e) => $e->payloadHash,
-            $pendingEvidence
-        );
-        $merkleRoot = $this->computeMerkleRoot($leafHashes);
+                return null;
+            }
 
-        // ── Block sequencing ──────────────────────────────────────
-        $latestBlock     = $this->ledgerBlockModel->findLatestBlock();
-        $blockNumber     = $latestBlock ? $latestBlock->blockNumber + 1 : 1;
-        $previousHash    = $latestBlock ? $latestBlock->blockHash : null;
+            $now = date('Y-m-d H:i:s');
 
-        // ── Period from evidence timestamps ───────────────────────
-        $periodStart = min(array_map(
-            static fn ($e) => (string) ($e->occurredAt ?? $now),
-            $pendingEvidence
-        ));
-        $periodEnd = max(array_map(
-            static fn ($e) => (string) ($e->occurredAt ?? $now),
-            $pendingEvidence
-        ));
+            $leafHashes = array_map(
+                static fn ($e) => $e->payloadHash,
+                $pendingEvidence
+            );
+            $merkleRoot = $this->computeMerkleRoot($leafHashes);
 
-        // ── Canonicalize events (RFC 8785 — sorted keys) ──────────
-        $events = array_map(
-            static fn ($e) => (object) [
-                'eventId'       => $e->eventId,
-                'eventType'     => $e->eventType,
-                'occurredAt'    => (string) $e->occurredAt,
-                'aggregateType' => $e->aggregateType,
-                'aggregateId'   => $e->aggregateId,
-                'payloadHash'   => $e->payloadHash,
-            ],
-            $pendingEvidence
-        );
-        $eventsJson = json_encode($events, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $latestBlock     = $this->ledgerBlockModel->findLatestBlock();
+            $blockNumber     = $latestBlock ? $latestBlock->blockNumber + 1 : 1;
+            $previousHash    = $latestBlock ? $latestBlock->blockHash : null;
 
-        // ── Block hash ────────────────────────────────────────────
-        $blockData = json_encode([
-            'blockNumber'       => $blockNumber,
-            'previousBlockHash' => $previousHash,
-            'merkleRoot'        => $merkleRoot,
-            'events'            => json_decode($eventsJson, true),
-            'sealedAt'          => $now,
-            'schemaVersion'     => '1.0',
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $periodStart = min(array_map(
+                static fn ($e) => (string) ($e->occurredAt ?? $now),
+                $pendingEvidence
+            ));
+            $periodEnd = max(array_map(
+                static fn ($e) => (string) ($e->occurredAt ?? $now),
+                $pendingEvidence
+            ));
 
-        $blockHash = hash('sha256', $blockData);
+            $events = array_map(
+                static fn ($e) => (object) [
+                    'eventId'       => $e->eventId,
+                    'eventType'     => $e->eventType,
+                    'occurredAt'    => (string) $e->occurredAt,
+                    'aggregateType' => $e->aggregateType,
+                    'aggregateId'   => $e->aggregateId,
+                    'payloadHash'   => $e->payloadHash,
+                ],
+                $pendingEvidence
+            );
+            $eventsJson = json_encode($events, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        // ── Block signature (placeholder — will use Ed25519) ──────
-        $blockSignature = $this->placeholderSign($blockHash, $signingKeyFingerprint);
+            $blockData = json_encode([
+                'blockNumber'       => $blockNumber,
+                'previousBlockHash' => $previousHash,
+                'merkleRoot'        => $merkleRoot,
+                'events'            => json_decode($eventsJson, true),
+                'sealedAt'          => $now,
+                'schemaVersion'     => '1.0',
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        // ── Persist block ─────────────────────────────────────────
-        $block = $this->ledgerBlockModel->createBlock([
-            'blockNumber'          => $blockNumber,
-            'periodStart'          => $periodStart,
-            'periodEnd'            => $periodEnd,
-            'eventCount'           => count($pendingEvidence),
-            'eventsJson'           => $eventsJson,
-            'merkleRoot'           => $merkleRoot,
-            'previousBlockHash'    => $previousHash,
-            'blockHash'            => $blockHash,
-            'blockSignature'       => $blockSignature,
-            'signingKeyFingerprint' => $signingKeyFingerprint,
-            'sealedAt'             => $now,
-        ]);
+            $blockHash = hash('sha256', $blockData);
 
-        // ── Link evidence to this block ───────────────────────────
-        foreach ($pendingEvidence as $ev) {
-            $this->evidenceModel->assignToLedger($ev->id, $blockNumber, (string) $block->id);
+            $blockSignature = $this->placeholderSign($blockHash, $signingKeyFingerprint);
+
+            $block = $this->ledgerBlockModel->createBlock([
+                'blockNumber'          => $blockNumber,
+                'periodStart'          => $periodStart,
+                'periodEnd'            => $periodEnd,
+                'eventCount'           => count($pendingEvidence),
+                'eventsJson'           => $eventsJson,
+                'merkleRoot'           => $merkleRoot,
+                'previousBlockHash'    => $previousHash,
+                'blockHash'            => $blockHash,
+                'blockSignature'       => $blockSignature,
+                'signingKeyFingerprint' => $signingKeyFingerprint,
+                'sealedAt'             => $now,
+            ]);
+
+            foreach ($pendingEvidence as $ev) {
+                $this->evidenceModel->assignToLedger($ev->id, $blockNumber, (string) $block->id);
+            }
+
+            $this->ledgerBlockModel->db->transComplete();
+        } catch (\Throwable $e) {
+            $this->ledgerBlockModel->db->transRollback();
+
+            throw $e;
         }
 
         return [
@@ -273,11 +278,29 @@ class LedgerService
                 );
             }
 
-            // ── Recompute block hash ─────────────────────────────
+            // ── Recompute Merkle root first ─────────────────────────
+            // Must be BEFORE block hash so hash verification is non-tautological
+            $eventHashes = array_map(
+                static fn (array $e) => $e['payloadHash'] ?? '',
+                $events
+            );
+            $recomputedMerkle = $this->computeMerkleRoot($eventHashes);
+
+            if ($recomputedMerkle !== $storedMerkle) {
+                $errors[] = sprintf(
+                    'Merkle root mismatch at block #%d (%s): stored %s, recomputed %s',
+                    $blockNumber,
+                    $blockId,
+                    $storedMerkle,
+                    $recomputedMerkle
+                );
+            }
+
+            // ── Recompute block hash using RECOMPUTED merkle root ──
             $recomputedData = json_encode([
                 'blockNumber'       => $blockNumber,
                 'previousBlockHash' => $previousStored,
-                'merkleRoot'        => $storedMerkle,
+                'merkleRoot'        => $recomputedMerkle,
                 'events'            => $events,
                 'sealedAt'          => $sealedAt,
                 'schemaVersion'     => $schemaVersion,
@@ -292,23 +315,6 @@ class LedgerService
                     $blockId,
                     $storedHash,
                     $recomputedHash
-                );
-            }
-
-            // ── Recompute Merkle root ────────────────────────────
-            $eventHashes = array_map(
-                static fn (array $e) => $e['payloadHash'] ?? '',
-                $events
-            );
-            $recomputedMerkle = $this->computeMerkleRoot($eventHashes);
-
-            if ($recomputedMerkle !== $storedMerkle) {
-                $errors[] = sprintf(
-                    'Merkle root mismatch at block #%d (%s): stored %s, recomputed %s',
-                    $blockNumber,
-                    $blockId,
-                    $storedMerkle,
-                    $recomputedMerkle
                 );
             }
 

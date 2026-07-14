@@ -206,19 +206,26 @@ class UserModel extends Model
      */
     public function incrementTotpFailures(User $user): User
     {
-        $row       = $this->db->table($this->table)->where('id', $user->id)->get()->getRowArray();
-        $current   = (int) ($row['totp_failures'] ?? 0);
-        $failures  = $current + 1;
-        $updateData = [
-            'totp_failures' => $failures,
-        ];
+        // Atomic: SET totp_failures = totp_failures + 1
+        $this->db->table($this->table)
+            ->where('id', $user->id)
+            ->set('totp_failures', 'totp_failures + 1', false)
+            ->update();
+
+        // Re-read to check threshold
+        $updated = $this->freshEntity($user->id);
+        $failures = (int) ($this->db->table($this->table)
+            ->select('totp_failures')
+            ->where('id', $user->id)
+            ->get()
+            ->getRowArray()['totp_failures'] ?? 0);
 
         if ($failures >= 5) {
-            $updateData['status']            = 'blocked';
-            $updateData['totp_blocked_until'] = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+            $this->update($user->id, [
+                'status'             => 'blocked',
+                'totp_blocked_until' => date('Y-m-d H:i:s', strtotime('+30 minutes')),
+            ]);
         }
-
-        $this->update($user->id, $updateData);
 
         return $this->freshEntity($user->id);
     }

@@ -98,7 +98,11 @@ class AuthController extends BaseWebController
         ], $userAgent);
 
         // ── Update last_login_at on custom user profile ──────────
-        $this->updateLastLogin($user->id ?? 0);
+        $shieldUserId = $user->id ?? null;
+
+        if ($shieldUserId !== null && $shieldUserId > 0) {
+            $this->updateLastLogin($shieldUserId);
+        }
 
         return redirect()->to(config('Auth')->loginRedirect())
             ->with('message', 'Inicio de sesion exitoso.');
@@ -198,7 +202,19 @@ class AuthController extends BaseWebController
                 'guaranteeLevel' => 'low',
             ]);
         } catch (\Throwable $e) {
-            log_message('error', 'Failed to create custom user profile: ' . $e->getMessage());
+            log_message('critical', 'Custom user profile creation failed for shield_user_id=' . $shieldUser->id . ': ' . $e->getMessage());
+
+            // Roll back: delete the SHIELD user since the custom profile could not be created.
+            // This prevents orphaned SHIELD users without corresponding MARAChain profiles.
+            try {
+                $userProvider->delete($shieldUser->id, true);
+            } catch (\Throwable $deleteError) {
+                log_message('critical', 'Failed to roll back SHIELD user ' . $shieldUser->id . ': ' . $deleteError->getMessage());
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'No se pudo completar el registro. Por favor, intentalo de nuevo.');
         }
 
         // ── Step 4: Auto-login ───────────────────────────────────
@@ -278,6 +294,10 @@ class AuthController extends BaseWebController
     /**
      * Record an authentication event as evidence.
      *
+     * Evidence failures are logged with full context but do not
+     * block the primary operation (login/logout/register).
+     * A separate monitoring process should alert on evidence gaps.
+     *
      * @param string $eventType Event type (LoginSuccess, LoginFailed, etc.)
      * @param array  $payload   Event payload (no PII beyond email)
      * @param string $userAgent Truncated User-Agent
@@ -301,7 +321,13 @@ class AuthController extends BaseWebController
                 'userAgentTruncated' => $userAgent,
             ]);
         } catch (\Throwable $e) {
-            log_message('error', 'Failed to record evidence: ' . $e->getMessage());
+            log_message('critical', sprintf(
+                'EVIDENCE_LOST: event=%s aggregate=%s error=%s trace=%s',
+                $eventType,
+                $payload['shieldUserId'] ?? $payload['email'] ?? 'unknown',
+                $e->getMessage(),
+                $e->getTraceAsString()
+            ));
         }
     }
 

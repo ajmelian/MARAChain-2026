@@ -89,6 +89,12 @@ class NotificationSend extends BaseCommand
         $subject = $notification->subject;
         $message = $notification->bodyText ?? '';
 
+        if (! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            CLI::write("  Invalid email: {$to}", 'red');
+
+            return false;
+        }
+
         if (! empty($notification->bodyHtml)) {
             $headers  = "MIME-Version: 1.0\r\n";
             $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
@@ -97,11 +103,21 @@ class NotificationSend extends BaseCommand
             $headers  = "Content-Type: text/plain; charset=UTF-8\r\n";
         }
 
-        $headers .= 'From: ' . (env('email.fromEmail') ?? 'noreply@marachain.local') . "\r\n";
+        $fromEmail = env('email.fromEmail') ?? 'noreply@marachain.local';
+        $headers .= 'From: ' . $fromEmail . "\r\n";
         $headers .= 'X-Mailer: MARAChain/1.4.0' . "\r\n";
 
-        // Suppress mail() warnings in development (no SMTP configured)
-        return @mail($to, $subject, $message, $headers);
+        $success = mail($to, $subject, $message, $headers);
+
+        if (! $success) {
+            $lastError = error_get_last();
+            CLI::write(
+                '  Mail error: ' . ($lastError['message'] ?? 'Unknown error'),
+                'red'
+            );
+        }
+
+        return $success;
     }
 
     /**

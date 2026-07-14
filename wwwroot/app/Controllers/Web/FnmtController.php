@@ -71,7 +71,7 @@ class FnmtController extends BaseWebController
         // ── Step 1: Extract identity from Nginx headers ──────────
         try {
             $identity = $this->fnmtProvider->resolveIdentity([
-                'server' => $_SERVER,
+                'server' => $this->request->getServer(),
             ]);
         } catch (\RuntimeException $e) {
             $this->recordEvidence('FnmtAuthFailed', [
@@ -85,7 +85,15 @@ class FnmtController extends BaseWebController
         }
 
         $taxId  = $identity['taxId'];
-        $taxIdHmac = hash_hmac('sha256', $taxId, env('encryption.hmacKey') ?? 'marachain-dev-key');
+        $hmacKey = env('encryption.hmacKey');
+
+        if (empty($hmacKey)) {
+            throw new \RuntimeException(
+                'encryption.hmacKey is not configured. FNMT authentication cannot proceed.'
+            );
+        }
+
+        $taxIdHmac = hash_hmac('sha256', $taxId, $hmacKey);
 
         // ── Step 2: Find or create custom user identity ──────────
         $customUser = $this->userModel->findByTaxIdHmac($taxIdHmac);
@@ -383,23 +391,107 @@ class FnmtController extends BaseWebController
     }
 
     /**
-     * Encrypt TOTP secret for storage.
+     * Encrypt TOTP secret for storage using AES-256-GCM.
+     *
+     * Uses the application encryption key (encryption.key) for AEAD.
+     * Produces base64-encoded ciphertext with IV and tag prepended.
+     *
+     * @param string $secret Plaintext Base32 TOTP secret
+     *
+     * @return string Base64-encoded encrypted secret (IV + ciphertext + tag)
+     *
+     * @throws \RuntimeException When encryption key is not configured
+     *
+     * @since 1.4.0
      */
     private function encryptTotpSecret(string $secret): string
     {
-        $key = env('encryption.hmacKey') ?? 'marachain-dev-key';
+        $rawKey = env('encryption.key');
 
-        return base64_encode(
-            hash_hmac('sha256', $secret, $key, true)
+        if (empty($rawKey)) {
+            throw new \RuntimeException(
+                'encryption.key is not configured. TOTP secret cannot be encrypted.'
+            );
+        }
+
+        // Derive a 256-bit key from the configured encryption key
+        $key = hash('sha256', $rawKey, true);
+        $iv  = random_bytes(12); // 96-bit nonce for GCM
+
+        $ciphertext = openssl_encrypt(
+            $secret,
+            'aes-256-gcm',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv,
+            $tag,
+            '',
+            16 // tag length
         );
+
+        if ($ciphertext === false) {
+            throw new \RuntimeException('TOTP secret encryption failed.');
+        }
+
+        // Format: IV (12 bytes) + ciphertext + tag (16 bytes)
+        return base64_encode($iv . $ciphertext . $tag);
     }
 
     /**
-     * Decrypt TOTP secret from storage. Returns empty string on failure.
+     * Decrypt TOTP secret from storage.
+     *
+     * Reverses the AES-256-GCM encryption applied by encryptTotpSecret().
+     *
+     * @param string $encrypted Base64-encoded encrypted secret
+     *
+     * @return string Plaintext Base32 TOTP secret, or empty string on failure
+     *
+     * @since 1.4.0
      */
     private function decryptTotpSecret(string $encrypted): string
     {
-        return '';
+        if ($encrypted === '') {
+            return '';
+        }
+
+        $rawKey = env('encryption.key');
+
+        if (empty($rawKey)) {
+            log_message('error', 'TOTP decryption failed: encryption.key not configured.');
+
+            return '';
+        }
+
+        $key  = hash('sha256', $rawKey, true);
+        $data = base64_decode($encrypted, true);
+
+        if ($data === false || strlen($data) < 28) {
+            // Minimum: 12 (IV) + 0 (data) + 16 (tag)
+            log_message('error', 'TOTP decryption failed: invalid ciphertext format.');
+
+            return '';
+        }
+
+        $iv         = substr($data, 0, 12);
+        $tag        = substr($data, -16);
+        $ciphertext = substr($data, 12, -16);
+
+        $plaintext = openssl_decrypt(
+            $ciphertext,
+            'aes-256-gcm',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv,
+            $tag
+        );
+
+        if ($plaintext === false) {
+            log_message('error', 'TOTP decryption failed: authentication tag mismatch or key error.');
+
+            return '';
+        }
+
+        return $plaintext;
     }
 
     /**
@@ -447,6 +539,16 @@ class FnmtController extends BaseWebController
 
     /**
      * Record an authentication event as evidence.
+     *
+     * Evidence failures are logged with full context but do not
+     * block the primary operation. A separate monitoring process
+     * should alert on evidence gaps.
+     *
+     * @param string $eventType Event type
+     * @param array  $payload   Event payload
+     * @param string $userAgent Truncated User-Agent
+     *
+     * @since 1.4.0
      */
     private function recordEvidence(string $eventType, array $payload, string $userAgent = ''): void
     {
@@ -463,7 +565,13 @@ class FnmtController extends BaseWebController
                 'userAgentTruncated' => $userAgent,
             ]);
         } catch (\Throwable $e) {
-            log_message('error', 'Evidence: ' . $e->getMessage());
+            log_message('critical', sprintf(
+                'EVIDENCE_LOST: event=%s aggregate=%s error=%s trace=%s',
+                $eventType,
+                $payload['userId'] ?? 'unknown',
+                $e->getMessage(),
+                $e->getTraceAsString()
+            ));
         }
     }
 

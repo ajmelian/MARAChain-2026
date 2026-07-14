@@ -108,6 +108,8 @@ $routes->group('transfers', static function (RouteCollection $routes): void {
     $routes->get('(:segment)',          'TransferController::show/$1');
     $routes->post('/',                  'TransferController::create');
     $routes->post('(:segment)/revoke',  'TransferController::revoke/$1');
+    $routes->post('(:segment)/accept',  'TransferController::accept/$1');
+    $routes->post('(:segment)/reject',  'TransferController::reject/$1');
 });
 
 // ── Signatures Routes ──────────────────────────────────────────

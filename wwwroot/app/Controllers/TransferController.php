@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\DocumentTransferModel;
+use App\Services\EvidenceService;
 use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -20,6 +21,8 @@ class TransferController extends BaseController
 
     private DocumentTransferModel $transferModel;
 
+    private EvidenceService $evidenceService;
+
     /**
      * Constructor.
      *
@@ -27,7 +30,8 @@ class TransferController extends BaseController
      */
     public function __construct()
     {
-        $this->transferModel = model(DocumentTransferModel::class);
+        $this->transferModel    = model(DocumentTransferModel::class);
+        $this->evidenceService  = new EvidenceService();
     }
 
     /**
@@ -99,6 +103,14 @@ class TransferController extends BaseController
             return $this->fail($e->getMessage(), 400);
         }
 
+        // Record evidence
+        $this->evidenceService->documentSent(
+            $transfer->id,
+            $transfer->senderId,
+            $transfer->recipientId,
+            $transfer->documentId
+        );
+
         return $this->respondCreated($transfer);
     }
 
@@ -140,6 +152,67 @@ class TransferController extends BaseController
         }
 
         $transfer = $this->transferModel->revokeTransfer($transfer);
+
+        // Record evidence
+        $this->evidenceService->transferRevoked($transfer->id, $transfer->senderId);
+
+        return $this->respond($transfer);
+    }
+
+    /**
+     * Accept a transfer (recipient).
+     *
+     * @param string $id Transfer UUID
+     *
+     * @return ResponseInterface
+     *
+     * @since 1.4.0
+     */
+    public function accept(string $id): ResponseInterface
+    {
+        $transfer = $this->transferModel->freshEntity($id);
+
+        if ($transfer === null) {
+            return $this->failNotFound('Transfer not found.');
+        }
+
+        try {
+            $transfer = $this->transferModel->transitionStatus($transfer, 'ACCEPTED');
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage(), 422);
+        }
+
+        $this->evidenceService->transferAccepted($transfer->id, $transfer->recipientId);
+
+        return $this->respond($transfer);
+    }
+
+    /**
+     * Reject a transfer (recipient).
+     *
+     * @param string $id Transfer UUID
+     *
+     * @return ResponseInterface
+     *
+     * @since 1.4.0
+     */
+    public function reject(string $id): ResponseInterface
+    {
+        $transfer = $this->transferModel->freshEntity($id);
+
+        if ($transfer === null) {
+            return $this->failNotFound('Transfer not found.');
+        }
+
+        $reason = $this->request->getJSON(true)['reason'] ?? '';
+
+        try {
+            $transfer = $this->transferModel->transitionStatus($transfer, 'REJECTED');
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage(), 422);
+        }
+
+        $this->evidenceService->transferRejected($transfer->id, $transfer->recipientId, $reason);
 
         return $this->respond($transfer);
     }

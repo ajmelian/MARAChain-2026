@@ -77,4 +77,28 @@ abstract class BaseWebController extends BaseController
     {
         return view($view, $data);
     }
+
+    /**
+     * Get the authenticated user's custom profile UUID.
+     *
+     * Links from SHIELD session user → custom users table
+     * via shield_user_id.
+     *
+     * @return string|null Custom user UUID or null if not authenticated
+     *
+     * @since 1.4.0
+     */
+    protected function getAuthenticatedUserId(): ?string
+    {
+        $shieldUser = auth()->user();
+
+        if ($shieldUser === null) {
+            return null;
+        }
+
+        $userModel = model(\App\Models\UserModel::class);
+        $customUser = $userModel->findByShieldUserId($shieldUser->id ?? 0);
+
+        return $customUser?->id ?? null;
+    }
 }

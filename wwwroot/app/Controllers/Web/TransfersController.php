@@ -47,41 +47,17 @@ class TransfersController extends BaseWebController
     public function inbox(): string
     {
         $statusFilter = $this->request->getGet('status');
+        $userId       = $this->getAuthenticatedUserId();
 
-        // ── Mock data para MVP ──
-        $mockData = [
-            [
-                'id'          => '880e8400-e29b-41d4-a716-446655440003',
-                'senderId'    => '550e8400-e29b-41d4-a716-446655440000',
-                'recipientId' => '00000000-0000-4000-a000-000000000001',
-                'documentId'  => '770e8400-e29b-41d4-a716-446655440002',
-                'status'      => 'AVAILABLE',
-                'createdAt'   => '2026-07-13 09:00:00',
-            ],
-            [
-                'id'          => '881e8400-e29b-41d4-a716-446655440004',
-                'senderId'    => '00000000-0000-4000-a000-000000000001',
-                'recipientId' => '660e8400-e29b-41d4-a716-446655440005',
-                'documentId'  => '771e8400-e29b-41d4-a716-446655440006',
-                'status'      => 'SENT',
-                'createdAt'   => '2026-07-12 15:30:00',
-            ],
-        ];
-
-        // Convertir arrays a entidades DocumentTransfer
-        $transfers = array_map(
-            static fn (array $data): DocumentTransfer => new DocumentTransfer($data),
-            $mockData
-        );
-
-        // Filtrar por estado si se especifico
-        if ($statusFilter !== null && $statusFilter !== '') {
-            $transfers = array_values(
-                array_filter(
-                    $transfers,
-                    static fn (DocumentTransfer $t): bool => $t->status === $statusFilter
+        if ($userId !== null) {
+            $transfers = $statusFilter
+                ? array_filter(
+                    $this->transferModel->findByRecipientId($userId),
+                    static fn ($t) => $t->status === $statusFilter
                 )
-            );
+                : $this->transferModel->findByRecipientId($userId);
+        } else {
+            $transfers = [];
         }
 
         return $this->render('transfers/inbox', [
@@ -102,41 +78,17 @@ class TransfersController extends BaseWebController
     public function outbox(): string
     {
         $statusFilter = $this->request->getGet('status');
+        $userId       = $this->getAuthenticatedUserId();
 
-        // ── Mock data para MVP ──
-        $mockData = [
-            [
-                'id'          => '880e8400-e29b-41d4-a716-446655440003',
-                'senderId'    => '550e8400-e29b-41d4-a716-446655440000',
-                'recipientId' => '00000000-0000-4000-a000-000000000001',
-                'documentId'  => '770e8400-e29b-41d4-a716-446655440002',
-                'status'      => 'AVAILABLE',
-                'createdAt'   => '2026-07-13 09:00:00',
-            ],
-            [
-                'id'          => '881e8400-e29b-41d4-a716-446655440004',
-                'senderId'    => '00000000-0000-4000-a000-000000000001',
-                'recipientId' => '660e8400-e29b-41d4-a716-446655440005',
-                'documentId'  => '771e8400-e29b-41d4-a716-446655440006',
-                'status'      => 'SENT',
-                'createdAt'   => '2026-07-12 15:30:00',
-            ],
-        ];
-
-        // Convertir arrays a entidades DocumentTransfer
-        $transfers = array_map(
-            static fn (array $data): DocumentTransfer => new DocumentTransfer($data),
-            $mockData
-        );
-
-        // Filtrar por estado si se especifico
-        if ($statusFilter !== null && $statusFilter !== '') {
-            $transfers = array_values(
-                array_filter(
-                    $transfers,
-                    static fn (DocumentTransfer $t): bool => $t->status === $statusFilter
+        if ($userId !== null) {
+            $transfers = $statusFilter
+                ? array_filter(
+                    $this->transferModel->findBySenderId($userId),
+                    static fn ($t) => $t->status === $statusFilter
                 )
-            );
+                : $this->transferModel->findBySenderId($userId);
+        } else {
+            $transfers = [];
         }
 
         return $this->render('transfers/outbox', [

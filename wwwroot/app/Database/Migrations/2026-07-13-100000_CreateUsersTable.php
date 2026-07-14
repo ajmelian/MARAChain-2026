@@ -11,7 +11,7 @@ use CodeIgniter\Database\RawSql;
  * Migration: Create users table.
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class CreateUsersTable extends Migration
 {

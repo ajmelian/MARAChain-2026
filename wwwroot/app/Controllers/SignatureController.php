@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * SignatureController — request and retrieve electronic signatures.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class SignatureController extends BaseController
 {

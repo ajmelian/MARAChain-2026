@@ -32,7 +32,7 @@ use CodeIgniter\Entity\Entity;
  * @property string      $createdAt            Creation timestamp
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class Evidence extends Entity
 {

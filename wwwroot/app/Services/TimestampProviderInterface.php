@@ -16,7 +16,7 @@ namespace App\Services;
  *
  * @package App\Services
  * @since   1.3.0
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 interface TimestampProviderInterface
 {
@@ -38,7 +38,7 @@ interface TimestampProviderInterface
      * @throws \RuntimeException If the TSA service is unavailable or rejects the request.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function requestTimestamp(string $hash, string $algorithm = 'SHA-256'): array;
 
@@ -55,7 +55,7 @@ interface TimestampProviderInterface
      *                                and covers the given hash.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function validateTimestamp(string $timestampToken, string $hash): bool;
 
@@ -68,7 +68,7 @@ interface TimestampProviderInterface
      * @return string Provider identifier.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function getName(): string;
 }

@@ -16,7 +16,7 @@ use InvalidArgumentException;
  * PENDING -> SENDING -> SENT | FAILED -> DEAD_LETTER.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class NotificationModel extends Model
 {

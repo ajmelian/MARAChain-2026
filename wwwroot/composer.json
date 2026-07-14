@@ -1,13 +1,18 @@
 {
-    "name": "codeigniter4/appstarter",
-    "description": "CodeIgniter4 starter app",
-    "license": "MIT",
+    "name": "ajmelian/marachain",
+    "description": "MARAChain — Plataforma de intercambio seguro de documentacion con firma electronica",
+    "license": "GPL-3.0-or-later",
     "type": "project",
-    "homepage": "https://codeigniter.com",
+    "homepage": "https://github.com/ajmelian/MARAChain-2026",
+    "authors": [
+        {
+            "name": "Aythami Melian Perdomo",
+            "email": "ajmelper@gmail.com",
+            "role": "Developer"
+        }
+    ],
     "support": {
-        "forum": "https://forum.codeigniter.com/",
-        "source": "https://github.com/codeigniter4/CodeIgniter4",
-        "slack": "https://codeigniterchat.slack.com"
+        "source": "https://github.com/ajmelian/MARAChain-2026"
     },
     "require": {
         "php": "^8.2",

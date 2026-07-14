@@ -17,7 +17,7 @@ use CodeIgniter\Test\DatabaseTestTrait;
  * and genesis block creation.
  *
  * @since 1.4.0
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 final class LedgerServiceTest extends CIUnitTestCase
 {

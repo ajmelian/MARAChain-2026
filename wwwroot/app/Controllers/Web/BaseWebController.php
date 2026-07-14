@@ -13,7 +13,7 @@ use App\Controllers\BaseController;
  * and common view data like a simulated authenticated user.
  *
  * @since 1.2.0
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 abstract class BaseWebController extends BaseController
 {

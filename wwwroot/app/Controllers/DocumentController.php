@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * DocumentController — CRUD + seal for user documents.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class DocumentController extends BaseController
 {

@@ -17,7 +17,7 @@ use RuntimeException;
  * internal ledger via ledgerBlockNumber assignment.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class EvidenceModel extends Model
 {

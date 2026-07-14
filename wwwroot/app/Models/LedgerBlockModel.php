@@ -18,7 +18,7 @@ use RuntimeException;
  * previousBlockHash chaining.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class LedgerBlockModel extends Model
 {

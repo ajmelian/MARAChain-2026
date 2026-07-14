@@ -15,7 +15,7 @@ namespace App\Services;
  *
  * @package App\Services
  * @since   1.3.0
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 interface SignatureProviderInterface
 {
@@ -35,7 +35,7 @@ interface SignatureProviderInterface
      * @throws \RuntimeException On provider communication error or invalid input.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function requestSignature(string $digest, string $algorithm, string $intent, array $options = []): array;
 
@@ -51,7 +51,7 @@ interface SignatureProviderInterface
      *                           and identity when completed.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function checkStatus(string $requestId): array;
 
@@ -67,7 +67,7 @@ interface SignatureProviderInterface
      * @return bool                   True if the signature is cryptographically valid.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function validateSignature(string $signedDigest, string $originalDigest, string $algorithm): bool;
 
@@ -80,7 +80,7 @@ interface SignatureProviderInterface
      * @return string Provider identifier.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function getName(): string;
 }

@@ -1,4 +1,9 @@
 <!doctype html>
+<!--
+  MARAChain — Plataforma de intercambio seguro de documentacion con firma electronica
+  Copyright (C) 2026 Aythami Melián Perdomo <ajmelper@gmail.com>
+  Licensed under GPL v3 — https://www.gnu.org/licenses/gpl-3.0.html
+-->
 <html lang="es">
 <head>
     <meta charset="utf-8">

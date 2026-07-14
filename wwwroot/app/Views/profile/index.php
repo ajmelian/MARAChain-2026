@@ -10,7 +10,7 @@ declare(strict_types=1);
  * estado TOTP, dispositivos activos y seccion de seguridad.
  *
  * @package App\Views\Profile
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  * @since   1.1.1
  *
  * @var \App\Entities\User          $user       Usuario autenticado
@@ -495,7 +495,7 @@ $this->extend('layouts/main');
  * Profile page — device revocation and interactivity.
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 (function() {
     'use strict';

@@ -10,7 +10,7 @@ use CodeIgniter\Database\Migration;
  * Migration: Create signature_requests table.
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class CreateSignatureRequestsTable extends Migration
 {

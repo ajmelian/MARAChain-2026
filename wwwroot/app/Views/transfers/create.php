@@ -10,7 +10,7 @@ declare(strict_types=1);
  * carga de archivo PDF via Dropzone y opciones de seguridad.
  *
  * @package App\Views\Transfers
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  * @since   1.1.1
  *
  * @var array<string, mixed> $countries   Lista de paises ISO 3166-1 alpha-2
@@ -397,7 +397,7 @@ $this->extend('layouts/main');
  *   - Form submit interception for full validation
  *
  * @since 1.4.0
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 (function() {
     'use strict';

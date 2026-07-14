@@ -15,7 +15,7 @@ use CodeIgniter\Database\Migration;
  * (identity types, tax IDs, TOTP, etc.).
  *
  * @since 1.3.0
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class AddShieldUserIdToUsers extends Migration
 {

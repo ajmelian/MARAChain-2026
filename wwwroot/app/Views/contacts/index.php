@@ -10,7 +10,7 @@ declare(strict_types=1);
  * e indicador de estado de identidad.
  *
  * @package App\Views\Contacts
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  * @since   1.1.1
  *
  * @var \App\Entities\Contact[] $contacts Lista de contactos del usuario
@@ -457,7 +457,7 @@ $this->extend('layouts/main');
  * Contacts page — search, CRUD modals, and form validation.
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 (function() {
     'use strict';

@@ -17,7 +17,7 @@ namespace App\Services;
  *
  * @package App\Services
  * @since   1.3.0
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 interface LedgerAnchorInterface
 {
@@ -41,7 +41,7 @@ interface LedgerAnchorInterface
      * @throws \RuntimeException If anchoring fails due to network or consensus error.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function anchor(array $checkpoint): array;
 
@@ -58,7 +58,7 @@ interface LedgerAnchorInterface
      *                        - confirmations: int
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function verify(array $receipt): array;
 
@@ -70,7 +70,7 @@ interface LedgerAnchorInterface
      *                          (e.g. "confirmed", "pending", "failed", "unknown").
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function status(string $anchorId): string;
 }

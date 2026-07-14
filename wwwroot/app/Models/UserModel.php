@@ -14,7 +14,7 @@ use CodeIgniter\Model;
  * TOTP management (block after 5 failures), and status transitions.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class UserModel extends Model
 {

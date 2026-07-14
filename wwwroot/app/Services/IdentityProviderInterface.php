@@ -16,7 +16,7 @@ namespace App\Services;
  *
  * @package App\Services
  * @since   1.3.0
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 interface IdentityProviderInterface
 {
@@ -42,7 +42,7 @@ interface IdentityProviderInterface
      *                           or fails validation.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function resolveIdentity(array $providerData): array;
 
@@ -55,7 +55,7 @@ interface IdentityProviderInterface
      * @return string Provider identifier.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function getName(): string;
 }

@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * DeviceController — register, list, show and revoke user devices.
  *
  * @since  1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class DeviceController extends BaseController
 {

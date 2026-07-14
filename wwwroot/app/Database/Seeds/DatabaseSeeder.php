@@ -14,7 +14,7 @@ use CodeIgniter\Database\Seeder;
  * running, so this seeder is invoked on every test setUp().
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class DatabaseSeeder extends Seeder
 {

@@ -24,7 +24,7 @@ namespace App\Services;
  *
  * @package App\Services
  * @since   1.3.0
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class EncryptionService
 {
@@ -41,7 +41,7 @@ class EncryptionService
      * @return bool                           True if envelope structure is valid.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function validateEnvelope(array $envelope): bool
     {
@@ -75,7 +75,7 @@ class EncryptionService
      * @return array|null       The recipient envelope, or null if not found.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function getRecipientEnvelope(array $envelope, string $userId): ?array
     {
@@ -99,7 +99,7 @@ class EncryptionService
      * @return bool                 True if the hash matches.
      *
      * @since 1.3.0
-     * @author Aythami
+     * @author Aythami Melián Perdomo <ajmelper@gmail.com>
      */
     public function verifyManifestHash(string $expectedHash, string $manifestJson): bool
     {

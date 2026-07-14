@@ -8,7 +8,7 @@ namespace App\Validation;
  * Custom validation rules for MARAChain.
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class CustomRules
 {

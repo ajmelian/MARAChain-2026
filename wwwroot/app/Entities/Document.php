@@ -34,7 +34,7 @@ use CodeIgniter\Entity\Entity;
  * @property string      $updatedAt           Last update timestamp
  *
  * @since 1.1.1
- * @author Aythami
+ * @author Aythami Melián Perdomo <ajmelper@gmail.com>
  */
 class Document extends Entity
 {

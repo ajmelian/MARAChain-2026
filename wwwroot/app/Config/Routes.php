@@ -18,6 +18,13 @@ $routes->get('register', 'Web\AuthController::register', ['as' => 'register', 'f
 $routes->post('register', 'Web\AuthController::register', ['filter' => 'throttle:auth']);
 $routes->get('logout', 'Web\AuthController::logout', ['as' => 'logout']);
 
+// ── FNMT Certificate Authentication ─────────────────────────────
+$routes->get('auth/fnmt', 'Web\FnmtController::login');
+$routes->get('auth/fnmt/totp-setup', 'Web\FnmtController::totpSetup');
+$routes->post('auth/fnmt/totp-setup', 'Web\FnmtController::totpSetup');
+$routes->get('auth/fnmt/totp-verify', 'Web\FnmtController::totpVerify');
+$routes->post('auth/fnmt/totp-verify', 'Web\FnmtController::totpVerify');
+
 // ═════════════════════════════════════════════════════════════════════
 //  WEB ROUTES — Vistas HTML (protegidas con SHIELD session auth)
 // ═════════════════════════════════════════════════════════════════════

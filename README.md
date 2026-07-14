@@ -15,6 +15,16 @@
 
 MARAChain es una plataforma SaaS para gestion, transmision y custodia segura de documentos. Combina identidad electronica, autenticacion reforzada (certificado FNMT + TOTP), firma electronica delegada, cifrado de extremo a extremo (WebCrypto), almacenamiento distribuido privado (IPFS) y un ledger criptografico de evidencias. Modelo _only-4-your-eyes_ sin clave maestra.
 
+## Autor
+
+**Aythami Melián Perdomo** — Arquitecto de Software Seguro especializado en IAM, autenticación fuerte y API Security.
+
+| | |
+|---|---|
+| **Especialidades** | PHP 8.x · OAuth2/OIDC · eIDAS · OWASP |
+| **LinkedIn** | [linkedin.com/in/aythami-melian](https://www.linkedin.com/in/aythami-melian/) |
+| **Email** | [ajmelper@gmail.com](mailto:ajmelper@gmail.com) |
+
 ## Stack Tecnologico
 
 | Capa | Tecnologia | Version |

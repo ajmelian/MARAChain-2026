@@ -6,6 +6,7 @@
 
 | Date | Version | Auditor | Scope | Findings | Status |
 |------|---------|---------|-------|----------|--------|
+| 2026-07-14 | 1.2.0 → 1.4.0 | Internal | 33 archivos + 10 nuevos: controladores, servicios, migrations, deploy scripts | 16 defectos (12 corregidos, 4 pendientes), MVP features integrados | **Completada** |
 | 2026-07-14 | 1.2.0 → 1.2.1 | Internal | 33 archivos: 9 controladores Web, 9 modelos, 15 servicios/comandos | 16 defectos (12 corregidos, 4 pendientes de aprobacion) | **Completada** |
 
 ---

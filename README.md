@@ -1,7 +1,7 @@
 # MARAChain
 
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com/ajmelian/MARAChain-2026)
-[![Version](https://img.shields.io/badge/version-1.2.1-blue)](./VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue)](./VERSION.md)
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4623?style=flat)](https://codeigniter.com/)
 [![SHIELD](https://img.shields.io/badge/SHIELD-1.3-EE4623?style=flat)](https://shield.codeigniter.com/)
@@ -135,13 +135,14 @@ marachain/
 │   ├── app/
 │   │   ├── Commands/                  # 3 comandos CLI
 │   │   ├── Config/                    # Routes, Validation, Filters, SHIELD config
-│   │   ├── Controllers/               # 9 REST + 6 Web + Health + Base
-│   │   ├── Database/Migrations/       # 10 migraciones (9 app + SHIELD)
+│   │   ├── Controllers/               # 11 REST + 6 Web + Health + Base
+│   │   ├── Database/Migrations/       # 12 migraciones (9 app + 3 SHIELD/auth)
 │   │   ├── Entities/                  # 9 entidades (Entity CI4)
 │   │   ├── Filters/                   # SecurityHeaders, Throttle
+│   │   ├── Helpers/                   # Uuid helper (DRY UUID generation)
 │   │   ├── Language/                  # Traducciones (en/Validation)
 │   │   ├── Models/                    # 9 modelos
-│   │   ├── Services/                  # 8 servicios/interfaces
+│   │   ├── Services/                  # 10 servicios + 4 interfaces
 │   │   └── Validation/               # CustomRules
 │   ├── tests/                         # PHPUnit test suite (22 files)
 │   ├── public/                        # Document root
@@ -154,6 +155,8 @@ marachain/
 ├── SECURITY.md                        # Politica de seguridad
 ├── INSTALL.md                         # Guia de instalacion
 ├── AUDITORY.md                        # Trazabilidad de auditorias
+├── nginx-fnmt-mtls.conf               # Nginx mTLS configuration
+├── scripts/                           # Deploy scripts (staging, prod)
 ├── LICENSE                            # GPL-3.0-or-later
 └── .gitlab-ci.yml                     # Pipeline CI/CD
 ```
@@ -181,6 +184,9 @@ php spark ledger:genesis         # Crear bloque genesis del ledger
 php spark ledger:seal            # Sellar evidencias en nuevo bloque
 php spark notification:send      # Procesar notificaciones pendientes
 
+# Documentos
+php spark documents:upload       # Upload de documento cifrado (CLI test)
+
 # CodeIgniter
 php spark list                   # Listar comandos disponibles
 php spark make:controller        # Generar controlador
@@ -201,15 +207,16 @@ composer audit                   # Auditoria de dependencias
 - **Fase**: MVP (Pre-alpha)
 - **Tests**: 178 tests, 422 assertions (SQLite :memory:)
 - **Entidades**: 9 implementadas
-- **Migraciones**: 10 implementadas (9 app + SHIELD auth tables)
+- **Migraciones**: 12 implementadas (9 app + 3 SHIELD/auth linkage)
 - **Modelos**: 9 implementados
-- **Controladores REST**: 9 implementados (35+ endpoints)
+- **Controladores REST**: 11 implementados (40+ endpoints)
 - **Controladores Web**: 6 implementados (login, register, inbox, outbox, contacts, profile)
-- **Servicios**: 8 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor)
+- **Servicios**: 10 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor, Storage, Evidence, + 4 interfaces)
 - **CLI Commands**: 3 implementados (ledger:genesis, ledger:seal, notification:send)
 - **Validacion**: 9 grupos de reglas + 4 CustomRules
-- **Seguridad**: Filtro SecurityHeaders activo (7 cabeceras OWASP), Rate Limiting, SHIELD auth
-- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1)
+- **Seguridad**: Filtro SecurityHeaders activo (7 cabeceras OWASP), Rate Limiting, SHIELD auth, Nginx mTLS config
+- **Despliegue**: Scripts de deploy staging/prod, .env.example, nginx-fnmt-mtls.conf
+- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1), MVP feature audit (v1.4.0)
 
 ## Documentacion
 

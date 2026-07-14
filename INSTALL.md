@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
+> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -178,6 +178,7 @@ php spark migrate:status
 | App                 | 2026-07-13-100006_CreateLedgerBlocksTable   | migrated   |
 | App                 | 2026-07-13-100007_CreateContactsTable       | migrated   |
 | App                 | 2026-07-13-100008_CreateNotificationsTable  | migrated   |
+| App                 | 2026-07-14-400000_AddShieldUserIdToUsers    | migrated   |
 | Shield              | (auth tables)                               | migrated   |
 +---------------------+---------------------------------------------+------------+
 ```
@@ -516,7 +517,7 @@ git clone git@github.com:your-org/marachain.git
 cd marachain/wwwroot
 composer install
 cp env .env
-nano .env                                    # Configurar MySQL + encryption.key
+nano .env                                    # Configurar MySQL + encryption.key + encryption.hmacKey
 php spark migrate
 php spark shield:setup                       # Configurar SHIELD auth
 php spark serve                              # http://localhost:8080

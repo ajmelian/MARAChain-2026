@@ -1,6 +1,6 @@
 # Security Policy
 
-> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
+> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
 
 MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evidencias criptograficas. La seguridad es un requisito fundamental, no una caracteristica opcional.
 
@@ -10,7 +10,8 @@ MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evid
 
 | Version | Status | Security Support |
 |---------|--------|-----------------|
-| 1.2.1 (pre-alpha) | In Development | Not yet in production |
+| 1.4.0 (pre-alpha) | In Development | Not yet in production |
+| 1.2.1 (pre-alpha) | EOL (superseded by 1.4.0) | Not released |
 | 1.2.0 (pre-alpha) | EOL (superseded by 1.2.1) | Not released |
 | 1.1.1 (pre-alpha) | EOL (superseded) | Not released |
 | 1.0.0 (initial) | Archived | Not supported |
@@ -139,7 +140,22 @@ El NIF/NIE se almacena con cifrado de doble capa:
 - HSTS header con `max-age=31536000; includeSubDomains`
 - `$forceGlobalSecureRequests` configurable via `.env`
 
-### 11. Atomic Database Operations
+### 12. Ciphertext Envelope Validation (StorageService)
+
+- Validacion estricta del formato `marachain-envelope v1`: `{version, algorithm, iv, ciphertext, tag}`
+- Verificacion de integridad AEAD (tag) antes de almacenar ciphertext en BD
+- Rechazo de envelopes con versiones no soportadas o algoritmos no permitidos
+- La DEK (Data Encryption Key) nunca se almacena en el backend
+
+### 13. Nginx mTLS Configuration
+
+- `ssl_verify_client optional` a nivel global (permite acceso anonimo y certificado)
+- `ssl_verify_client` obligatorio en location `/auth/fnmt` (requiere certificado FNMT valido)
+- Cabeceras `SSL_CLIENT_*` pasadas a PHP-FPM via `fastcgi_param`
+- `ssl_verify_depth 4` para validar cadena de certificacion FNMT completa
+- Configuracion documentada en `nginx-fnmt-mtls.conf`
+
+### 14. Atomic Database Operations
 
 - `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico (evita TOCTOU)
 - `sealBlock()` envuelto en transaccion BD con rollback en fallo
@@ -237,9 +253,9 @@ Antes de cada merge a `develop`:
 | Threat | Module | Mitigation |
 |--------|--------|------------|
 | **S**poofing | Authentication | SHIELD sessions + FNMT cert mTLS + TOTP 2FA |
-| **T**ampering | Documents | SHA-256 hash + Merkle tree + ledger append-only |
-| **R**epudiation | Evidence | Ledger append-only con firma; transacciones BD atomicas |
-| **I**nfo Disclosure | Encryption | AES-256-GCM (NIF, TOTP), WebCrypto E2E (plan), only-4-your-eyes |
+| **T**ampering | Documents | SHA-256 hash + Merkle tree + ledger append-only + envelope AEAD validation |
+| **R**epudiation | Evidence | Ledger append-only con firma; transacciones BD atomicas; EvidenceService append-only |
+| **I**nfo Disclosure | Encryption | AES-256-GCM (NIF, TOTP, ciphertext), WebCrypto E2E, only-4-your-eyes, DEK never on backend |
 | **D**oS | Transfers | Throttle rate limiting (auth: 6/min, api: 60/min) |
 | **E**levation | Administration | SHIELD grupos de permisos; auditoria de operaciones privilegiadas |
 
@@ -251,6 +267,6 @@ Antes de cada merge a `develop`:
 | **I**dentifiability | NIF cifrado, busqueda solo via HMAC |
 | **N**on-repudiation | Ledger firmado, evidencias canonicalizadas |
 | **D**etectability | Acceso a documentos solo via ACL de transferencia |
-| **D**isclosure | Cifrado E2E, sin clave maestra |
-| **U**nawareness | Notificaciones de transferencias y accesos |
+| **D**isclosure | Cifrado E2E, sin clave maestra, DEK solo en cliente, envelope con AEAD |
+| **U**nawareness | Notificaciones de transferencias y accesos; evidencias de negocio via EvidenceService |
 | **N**on-compliance | Arquitectura documentada, ADR, audit trail |

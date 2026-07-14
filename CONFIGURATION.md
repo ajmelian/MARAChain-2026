@@ -1,6 +1,6 @@
 # Configuration Guide
 
-> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
+> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
 
 This document describes all configuration options for the MARAChain application.
 
@@ -127,6 +127,33 @@ app.CSPEnabled = false
 # .env
 encryption.key = hex64charstringhere
 ```
+
+### MARAChain-Specific Encryption Keys
+
+Definidas en `env` (template) y `.env`:
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `encryption.key` | `''` | Yes | AES-256-GCM key for TOTP secrets at rest (32 bytes = 64 hex chars) |
+| `encryption.hmacKey` | `''` | Yes | HMAC key for tax ID lookups (64+ random chars). Used for deterministic search without decrypting |
+
+```ini
+# .env
+encryption.key = [64-character hex string]
+encryption.hmacKey = [64+ random printable chars]
+```
+
+**Generate keys:**
+
+```bash
+# AES-256 key (32 bytes → 64 hex chars)
+php -r "echo 'encryption.key = ' . bin2hex(random_bytes(32)) . PHP_EOL;"
+
+# HMAC key
+php -r "echo 'encryption.hmacKey = ' . bin2hex(random_bytes(32)) . PHP_EOL;"
+```
+
+> @since 1.4.0: `encryption.hmacKey` is required when `encryption.key` is already set.
 
 ### `app/Config/Auth.php` (SHIELD)
 
@@ -278,7 +305,7 @@ $routes->group('', ['filter' => 'throttle:auth'], function($routes) {
 
 ### `app/Config/Routes.php`
 
-55+ total routes defined (35+ API REST + 18+ Web/Auth + 1 health + 1 home):
+60+ total routes defined (37+ API REST + 20+ Web/Auth + 1 health + 1 home):
 
 | Group | Routes | Methods |
 |-------|--------|---------|
@@ -287,8 +314,8 @@ $routes->group('', ['filter' => 'throttle:auth'], function($routes) {
 | **Auth (SHIELD)** | 5 | GET, POST |
 | `/users` | 6 | GET, POST, PUT, DELETE |
 | `/devices` | 4 | GET, POST, DELETE |
-| `/documents` | 5 | GET, POST, DELETE |
-| `/transfers` | 6 | GET, POST |
+| `/documents` | 6 | GET, POST, DELETE |
+| `/transfers` | 8 | GET, POST |
 | `/signatures` | 2 | GET, POST |
 | `/evidence` | 2 | GET |
 | `/ledger` | 3 | GET |
@@ -401,9 +428,13 @@ email.protocol = 'smtp'
 | Web frontend (Bootstrap 5 + Alpino) | Active | 1.2.0 |
 | CLI commands (ledger, notifications) | Active | 1.2.0 |
 | Service layer (ports & adapters) | Active | 1.2.0 |
-| FNMT certificate auth (mTLS) | In Development | - |
+| FNMT certificate auth (mTLS) | Active | 1.4.0 (Nginx config + FnmtController) |
+| Document upload with ciphertext (StorageService) | Active | 1.4.0 |
+| Evidence recording (EvidenceService) | Active | 1.4.0 |
+| SHIELD-user linkage (BaseWebController) | Active | 1.4.0 |
+| Dropzone JS + MARACrypto client encryption | Active | 1.4.0 |
+| Deploy scripts (staging/prod) | Active | 1.4.0 |
 | IPFS integration | Planned | - |
-| WebCrypto client encryption | Planned | - |
 | Blockchain anchoring (external DLT) | Planned | - |
 | Playwright E2E tests | Planned | - |
 | Multi-tenancy | Planned | - |

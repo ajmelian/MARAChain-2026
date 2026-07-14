@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.2.1 | **Date:** 2026-07-14 | **Status:** Baseline aceptada (con correcciones de auditoria)
+> **Version:** 1.4.0 | **Date:** 2026-07-14 | **Status:** MVP (Pre-alpha)
 
 ## Overview
 
@@ -36,6 +36,10 @@ Domain → sin dependencia de framework
 | ADR-012 | `Throttle` filter basado en token bucket | Rate limiting configurable por grupo de ruta; protege endpoints de auth y API sin dependencia externa (Redis/memcached) |
 | ADR-013 | AES-256-GCM para secretos TOTP | Cifrado reversible con autenticacion (AEAD); reemplaza HMAC unidireccional que impedia verificacion recurrente |
 | ADR-014 | Controladores Web separados de API REST | Separacion de responsabilidades: API devuelve JSON, Web devuelve HTML con vistas; comparten modelos de persistencia |
+| ADR-015 | `StorageService` con envelope `marachain-envelope v1` | Formato estandarizado de ciphertext: `{version, algorithm, iv, ciphertext, tag}`. Permite validacion de integridad AEAD antes de almacenar. Desacopla cifrado (cliente) de almacenamiento (servidor) |
+| ADR-016 | `shield_user_id` como FK en tabla `users` | SHIELD gestiona autenticacion (INT PK `shield_users.id`); MARAChain gestiona identidad y negocio (UUID PK `users.id`). Linkage via FK con UNIQUE constraint. `BaseWebController::getAuthenticatedUserId()` resuelve el mapeo en cada peticion autenticada |
+| ADR-017 | `EvidenceService` como servicio de dominio | Registro de eventos de negocio (`DocumentSent`, `TransferAccepted`, etc.) centralizado. Cada evento incluye `aggregateType`, `aggregateId`, `eventType` y `payloadJson`. Append-only con verificacion de integridad via LedgerService |
+| ADR-018 | `Helpers/Uuid.php` — DRY UUID generation | Reemplaza `generateUuidV4()` duplicada en 10 archivos por una funcion helper centralizada `generate_uuid_v4()`. Cargada via `BaseController::$helpers = ['uuid']` |
 
 ## Component Diagram
 
@@ -49,13 +53,14 @@ Domain → sin dependencia de framework
 │  │ UserController   │  │ AuthCtrl     │  │ ledger:genesis            │   │
 │  │ DeviceCtrl       │  │ FnmtCtrl     │  │ ledger:seal               │   │
 │  │ DocumentCtrl     │  │ TransfersCtrl│  │ notification:send         │   │
-│  │ TransferCtrl     │  │ ContactsCtrl │  │                           │   │
-│  │ SignatureCtrl    │  │ ProfileCtrl  │  └───────────┬───────────────┘   │
-│  │ EvidenceCtrl     │  │ BaseWebCtrl  │              │                   │
-│  │ LedgerCtrl       │  │              │              ▼                   │
-│  │ ContactCtrl      │  └──────┬───────┘    ┌──────────────────┐         │
-│  │ NotifCtrl        │         │            │    Models         │         │
-│  │ HealthCtrl       │         │            │ (Query Builder)   │         │
+│  │ DocumentUploadCtrl│ │ ContactsCtrl │  │                           │   │
+│  │ TransferCtrl     │  │ ProfileCtrl  │  └───────────┬───────────────┘   │
+│  │ SignatureCtrl    │  │ BaseWebCtrl  │              │                   │
+│  │ EvidenceCtrl     │  │              │              ▼                   │
+│  │ LedgerCtrl       │  └──────┬───────┘    ┌──────────────────┐         │
+│  │ ContactCtrl      │         │            │    Models         │         │
+│  │ NotifCtrl        │         │            │ (Query Builder)   │         │
+│  │ HealthCtrl       │         │            └────────┬─────────┘         │
 │  └────────┬─────────┘         │            └────────┬─────────┘         │
 │           │                   │                     │                   │
 │           ▼                   │                     ▼                   │
@@ -73,8 +78,10 @@ Domain → sin dependencia de framework
 │           │  EncryptionService                       ▼           │      │
 │           │  LedgerService              ┌──────────────────┐    │      │
 │           │  X509Service                │    Entities      │    │      │
-│           │  TimestampProviderInterface  │  9 entities     │    │      │
-│           │  LedgerAnchorInterface      │  (CI4 Entity)   │    │      │
+│           │  StorageService             │  9 entities     │    │      │
+│           │  EvidenceService            │  (CI4 Entity)   │    │      │
+│           │  TimestampProviderInterface  └──────────────────┘    │      │
+│           │  LedgerAnchorInterface                               │      │
 │           └─────────────────────────────┴──────────────────┘    │      │
 │                                                                 │      │
 │  ┌──────────────────────────────────────────────────────────────┼───┐  │
@@ -90,25 +97,36 @@ Domain → sin dependencia de framework
 ## Data Flow
 
 ```
-1. Cliente Web (WebCrypto)
-   │  Cifrado extremo a extremo en navegador
+1. Cliente Web (WebCrypto + Dropzone)
+   │  Cifrado extremo a extremo en navegador:
+   │  - MARACrypto.encryptDocument() genera DEK aleatoria
+   │  - Cifra documento con AES-256-GCM via WebCrypto
+   │  - Construye envelope {version, algorithm, iv, ciphertext, tag}
+   │  - DEK se envuelve para el destinatario (sobre criptografico)
    │  (documento NUNCA en claro en backend)
    ▼
 2. Nginx → PHP-FPM → CodeIgniter 4
    │  SecurityHeaders filter (after)
    │  forcehttps (before)
+   │  mTLS opcional (ssl_verify_client optional)
+   │  /auth/fnmt → mTLS obligatorio
    ▼
 3. Controller
    │  Validacion (Config\Validation + CustomRules)
+   │  StorageService: validacion de envelope marachain-envelope v1
+   │  EvidenceService: registro automatico de eventos de negocio
+   │  BaseWebController::getAuthenticatedUserId(): SHIELD→MARAChain linkage
    │  camelToSnake() conversion
    ▼
 4. Model (Query Builder)
-   │  UUID v4 generacion
+   │  UUID v4 generacion (Helpers/Uuid.php)
    │  Prepared statements (sin raw SQL)
+   │  shield_user_id linkage via FK
    ▼
 5. MySQL
    │  Tablas InnoDB con foreign keys
    │  charset utf8mb4
+   │  Ciphertext almacenado en columna documents.ciphertext
    ▼
 6. IPFS (documentos cifrados)
    │  Solo el destinatario puede descifrar
@@ -117,6 +135,7 @@ Domain → sin dependencia de framework
 7. Ledger (evidencias append-only)
    │  Bloques con Merkle tree
    │  Firmas criptograficas por bloque
+   │  Evidencias registradas via EvidenceService → LedgerService
 ```
 
 ## Directory Tree (`wwwroot/`)
@@ -154,7 +173,8 @@ wwwroot/
 │   │   ├── UserController.php         # CRUD + enableTotp (6 endpoints)
 │   │   ├── DeviceController.php       # index, show, register, revoke (4 endpoints)
 │   │   ├── DocumentController.php     # CRUD + seal (5 endpoints)
-│   │   ├── TransferController.php     # CRUD + inbox, outbox, revoke (6 endpoints)
+│   │   ├── DocumentUploadController.php# POST /documents/upload — envelope + ciphertext
+│   │   ├── TransferController.php     # CRUD + inbox, outbox, accept, reject, revoke (8 endpoints)
 │   │   ├── SignatureController.php    # request, show (2 endpoints)
 │   │   ├── EvidenceController.php     # index, show (2 endpoints)
 │   │   ├── LedgerController.php       # index, show, verify (3 endpoints)
@@ -178,6 +198,9 @@ wwwroot/
 │   │   │   ├── 2026-07-13-100006_CreateLedgerBlocksTable.php
 │   │   │   ├── 2026-07-13-100007_CreateContactsTable.php
 │   │   │   └── 2026-07-13-100008_CreateNotificationsTable.php
+│   │   │   ├── 2026-07-13-200000_create_auth_tables.php
+│   │   │   ├── 2026-07-14-300000_create_shield_tables.php
+│   │   │   └── 2026-07-14-400000_add_shield_user_id_to_users.php
 │   │   └── Seeds/
 │   │       └── DatabaseSeeder.php
 │   ├── Entities/
@@ -193,6 +216,8 @@ wwwroot/
 │   ├── Filters/
 │   │   ├── SecurityHeaders.php        # 7 cabeceras OWASP
 │   │   └── Throttle.php               # Token bucket rate limiter
+│   ├── Helpers/
+│   │   └── Uuid.php                    # generate_uuid_v4() — DRY UUID generation
 │   ├── Language/
 │   │   └── en/
 │   │       └── Validation.php         # Mensajes de error en ingles
@@ -208,11 +233,13 @@ wwwroot/
 │   │   └── NotificationModel.php      # outbox pattern, retry logic (atomic)
 │   ├── Services/
 │   │   ├── EncryptionService.php      # AES-256-GCM encrypt/decrypt
+│   │   ├── EvidenceService.php         # Automatic business event recording
 │   │   ├── FnmtIdentityProvider.php   # FNMT certificate identity resolution
 │   │   ├── IdentityProviderInterface.php # Identity provider abstraction
 │   │   ├── LedgerAnchorInterface.php  # External blockchain anchoring abstraction
 │   │   ├── LedgerService.php          # Block creation, Merkle tree, chain verification
 │   │   ├── SignatureProviderInterface.php # Signature provider abstraction
+│   │   ├── StorageService.php         # Ciphertext storage with envelope validation
 │   │   ├── TimestampProviderInterface.php # Trusted timestamping abstraction
 │   │   └── X509Service.php            # X.509 certificate parsing
 │   └── Validation/
@@ -296,6 +323,10 @@ Capa de presentacion REST. Extienden `BaseController`:
 - **Throttle.php**: token bucket rate limiter basado en archivos. Limites configurables por grupo de ruta (auth: 6 req/min, api: 60 req/min). Fingerprint via SHA1(IP + path). Retorna HTTP 429 con header `retry_after`.
 - Registrado como alias `security` y aplicado globalmente en `after`
 
+### Helpers (`app/Helpers/`)
+
+- **Uuid.php**: `generate_uuid_v4()` — generacion centralizada de UUIDs RFC 4122 via `random_bytes(16)`. Reemplaza el metodo duplicado en 10 archivos. Cargado via `BaseController::$helpers = ['uuid']`.
+
 ### Services (`app/Services/`)
 
 Capa de abstraccion de proveedores externos (patron Ports & Adapters):
@@ -306,6 +337,8 @@ Capa de abstraccion de proveedores externos (patron Ports & Adapters):
 - **TimestampProviderInterface** — abstraccion de sellado de tiempo confiable
 - **LedgerAnchorInterface** — abstraccion de anclaje en DLT externa
 - **EncryptionService** — cifrado/descifrado AES-256-GCM (AEAD) con claves de 32 bytes
+- **StorageService** — almacenamiento de ciphertext en BD con validacion de envelope `marachain-envelope v1`. Metodos `store()` y `retrieve()`. Valida integridad AEAD (tag) antes de persistir. Desacopla el cifrado (cliente) del almacenamiento (servidor)
+- **EvidenceService** — registro automatico de eventos de negocio (`DocumentSent`, `TransferAccepted`, `TransferRejected`). Metodo `record()` con soporte para payload JSON y aggregate references. Append-only. Integrado con LedgerService para sellado periodico
 - **LedgerService** — creacion de bloques, arbol Merkle, verificacion de integridad de cadena. Usa transacciones de BD para atomicidad (sealBlock)
 - **X509Service** — parseo de certificados X.509, extraccion de DN, resolucion de identidad
 
@@ -363,6 +396,7 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | GET | `/documents` | `DocumentController::index` | Listar documentos |
 | GET | `/documents/{id}` | `DocumentController::show` | Ver documento |
 | POST | `/documents` | `DocumentController::create` | Crear documento |
+| POST | `/documents/upload` | `DocumentUploadController::upload` | Subir documento cifrado (envelope) |
 | POST | `/documents/{id}/seal` | `DocumentController::seal` | Sellar documento |
 | DELETE | `/documents/{id}` | `DocumentController::delete` | Eliminar documento |
 | **Transfers** | | | |
@@ -371,6 +405,8 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | GET | `/transfers/received` | `TransferController::inbox` | Bandeja de entrada |
 | GET | `/transfers/{id}` | `TransferController::show` | Ver transferencia |
 | POST | `/transfers` | `TransferController::create` | Crear transferencia |
+| POST | `/transfers/{id}/accept` | `TransferController::accept` | Aceptar transferencia |
+| POST | `/transfers/{id}/reject` | `TransferController::reject` | Rechazar transferencia |
 | POST | `/transfers/{id}/revoke` | `TransferController::revoke` | Revocar transferencia |
 | **Signatures** | | | |
 | POST | `/signatures` | `SignatureController::request` | Solicitar firma |
@@ -412,7 +448,7 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | GET | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP |
 | POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP |
 
-**Total: 55+ rutas registradas (35+ REST API + 1 health + 18+ Web/Auth + 1 home + 1 ledger/verify)**
+**Total: 60+ rutas registradas (37+ REST API + 1 health + 20+ Web/Auth + 1 home + 1 ledger/verify)**
 
 ## Database
 
@@ -429,7 +465,8 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | 7 | `ledger_blocks` | `LedgerBlock` | `2026-07-13-100006` |
 | 8 | `contacts` | `Contact` | `2026-07-13-100007` |
 | 9 | `notifications` | `Notification` | `2026-07-13-100008` |
-| 10 | `auth_*` (SHIELD) | `UserIdentity`, `UserSecret` | `php spark shield:setup` |
+| 10 | `auth_*` (SHIELD) | `UserIdentity`, `UserSecret` | `2026-07-13-200000`, `2026-07-14-300000` |
+| 11 | `users.shield_user_id` | FK → `shield_users.id` | `2026-07-14-400000` |
 
 ### Caracteristicas del esquema
 
@@ -502,7 +539,8 @@ php vendor/bin/phpunit --coverage-text    # Con cobertura
 │  ┌─────────┐    ┌─────────────┐              │
 │  │  Nginx  │───▶│  PHP-FPM    │              │
 │  │  :443   │    │  Unix sock  │              │
-│  └─────────┘    └──────┬──────┘              │
+│  │  mTLS   │    └──────┬──────┘              │
+│  └─────────┘           │                      │
 │                        │                      │
 │  ┌─────────────────────┼──────────────────┐  │
 │  │  /var/www/prod/     │                  │  │
@@ -528,3 +566,5 @@ php vendor/bin/phpunit --coverage-text    # Con cobertura
 - **Staging**: `/var/www/staging/` con datos anonimizados
 - **Produccion**: `/var/www/prod/` con backup de BD antes de migrar
 - **Rollback**: `git checkout` a tag anterior + restore BD
+- **Nginx mTLS**: configuracion en `nginx-fnmt-mtls.conf` — `ssl_verify_client optional` global, obligatorio en `/auth/fnmt`
+- **Deploy scripts**: `scripts/deploy-staging.sh` y `scripts/deploy-prod.sh` para releases atomicas via symlink `current/`

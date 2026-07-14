@@ -10,11 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- FNMT certificate authentication (mTLS)
-- WebCrypto client-side encryption for document uploads
+- WebCrypto client-side encryption for document uploads (Dropzone integration complete, pending full E2E flow)
 - IPFS private cluster storage integration
-- Evidence canonicalization and append-only audit trail
-- Signature request workflow (provider integration with real providers)
 - Email notification outbox with retry logic (SMTP integration)
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
@@ -23,6 +20,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session fixation fix in FNMT flow (AP-2 from audit)
 - Rate limiting on TOTP routes (AP-3 from audit)
 - Replace inline PHP template strings with view files (AP-4 from audit)
+
+---
+
+## [1.4.0] - 2026-07-14
+
+### Added
+- **StorageService** (`app/Services/StorageService.php`): almacena ciphertext de documentos cifrados en BD. Valida el envelope `marachain-envelope v1` (version, algorithm, iv, ciphertext, tag). Operaciones `store()` y `retrieve()`.
+- **EvidenceService** (`app/Services/EvidenceService.php`): registro automatico de eventos de negocio (DocumentSent, TransferAccepted, TransferRejected, DocumentUploaded). Metodo `record()` con soporte para payload JSON y aggregate references.
+- **DocumentUploadController** (`app/Controllers/DocumentUploadController.php`): endpoint `POST /documents/upload` que recibe archivo cifrado multipart + envelope JSON. Valida formato de envelope, MIME types, y limites de tamano.
+- **TransferController::accept / reject**: endpoints `POST /transfers/:id/accept` y `POST /transfers/:id/reject` con registro automatico de evidencias via EvidenceService.
+- **SHIELD-user linkage**: nueva migracion `2026-07-14-400000_add_shield_user_id_to_users` que anade columna `shield_user_id` (INT FK → `shield_users.id`) a la tabla `users`. Permite que SHIELD gestione autenticacion mientras `users` almacena datos especificos de MARAChain.
+- **BaseWebController::getAuthenticatedUserId()**: resolucion del `user.id` (UUID v4) desde el `shield_user_id` de la sesion SHIELD activa. Usado por controladores web para operaciones de negocio.
+- **TransfersController (web) con datos reales**: inbox/outbox ahora consultan `DocumentTransferModel` real en lugar de mock data. Las vistas muestran transferencias del usuario autenticado.
+- **Dropzone JS + MARACrypto**: integracion del componente Dropzone para upload de documentos con cifrado client-side. `MARACrypto.encryptDocument()` genera DEK, cifra contenido con AES-256-GCM via WebCrypto, y construye el envelope antes del upload.
+- **Helpers/Uuid.php**: funcion `generate_uuid_v4()` centralizada para generacion DRY de UUIDs RFC 4122 (antes duplicada en 10 archivos).
+- **nginx-fnmt-mtls.conf**: configuracion completa de Nginx para autenticacion mTLS con certificados FNMT. Incluye `ssl_verify_client optional`, paso de cabeceras `SSL_CLIENT_*` a PHP-FPM, y location `/auth/fnmt` con mTLS obligatorio.
+- **Deploy scripts**: `scripts/deploy-staging.sh` y `scripts/deploy-prod.sh` para despliegue automatizado via rsync a VPS. Soportan releases atomicas con symlink `current/`.
+- **`.env.example`**: template de configuracion con variables MySQL, SMTP, y encryption keys documentadas.
+
+### Changed
+- `BaseWebController` anade `getAuthenticatedUserId()` para vincular sesion SHIELD con usuario MARAChain.
+- `TransfersController` (web) reemplaza mock data por consultas reales a `DocumentTransferModel`.
+- `Routes.php` ampliado con rutas de upload (`/documents/upload`), accept/reject de transferencias, y rutas FNMT auth.
+- `User` entity ahora incluye `shield_user_id` en `$datamap` para linkage bidireccional.
+- `DatabaseSeeder` actualizado con datos de prueba para el nuevo linkage SHIELD-user.
+- `.gitignore` actualizado con exclusiones de `resources/frontend/alpino/original/` y `wwwroot/build/*`.
+- `composer.json` mantiene dependencias `codeigniter4/shield: ^1.3`, `codeigniter4/settings: ^2.3`.
+
+### Security
+- Nginx mTLS config con `ssl_verify_client optional` y validacion estricta en `/auth/fnmt`.
+- StorageService valida integridad del envelope criptografico (tag AEAD) antes de almacenar.
+- DocumentUploadController rechaza envelopes con algoritmos no soportados o versiones incorrectas.
+- Dropzone cifra documentos en navegador: la DEK nunca sale del cliente, el backend solo ve ciphertext.
 
 ---
 

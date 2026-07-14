@@ -13,7 +13,52 @@
 
 ## Descripcion
 
-MARAChain es una plataforma SaaS para gestion, transmision y custodia segura de documentos. Combina identidad electronica, autenticacion reforzada (certificado FNMT + TOTP), firma electronica delegada, cifrado de extremo a extremo (WebCrypto), almacenamiento distribuido privado (IPFS) y un ledger criptografico de evidencias. Modelo _only-4-your-eyes_ sin clave maestra.
+MARAChain es una plataforma SaaS para la gestion, transmision y custodia segura de documentos entre personas fisicas y, en fases posteriores, entre profesionales, empresas y Administraciones. Combina identidad electronica, autenticacion reforzada, firma electronica delegada, cifrado de extremo a extremo, almacenamiento distribuido privado y un ledger criptografico de evidencias.
+
+### Problema que resuelve
+
+Los canales convencionales presentan limitaciones que MARAChain aborda de forma integrada:
+
+| Limitacion | Solucion MARAChain |
+|------------|-------------------|
+| El email no garantiza identidad real | Certificado digital FNMT de ciudadano (eIDAS) |
+| Una contrasena no prueba quien actua | Autenticacion reforzada: FNMT + TOTP |
+| Un enlace puede reenviarse o exponerse | Acceso controlado con sesion Shield + dispositivo |
+| El proveedor de almacenamiento puede acceder al contenido | Cifrado E2E en navegador: la DEK nunca sale del cliente |
+| Los registros de actividad pueden modificarse | Ledger criptografico append-only con Merkle tree |
+| Una descarga no equivale a lectura ni aceptacion | Trazabilidad completa: enviado, accedido, descargado, aceptado |
+| Firma, envio, custodia y auditoria en herramientas separadas | Plataforma unificada con todos los flujos integrados |
+| La eliminacion entra en conflicto con evidencias historicas | Documentos destruibles sin perder evidencias inmutables |
+
+### Propuesta de valor
+
+| Pilar | Descripcion |
+|-------|-------------|
+| **Identidad verificada** | Certificado FNMT de ciudadano (nivel eIDAS alto). Futuro: Cl@ve, FirmaProfesional |
+| **Autenticacion reforzada** | Certificado FNMT + TOTP → sesion CodeIgniter Shield con permisos por grupo |
+| **Cifrado extremo a extremo** | AES-256-GCM via WebCrypto en navegador. La Data Encryption Key nunca abandona el cliente |
+| **Firma electronica delegada** | El proveedor de firma recibe exclusivamente el digest. Nunca el documento, DEK, claves privadas ni CID |
+| **Ledger criptografico** | Cadena de bloques interna con Merkle tree, append-only, verificable. Preparado para anclaje DLT externo |
+
+### Flujo de alto nivel
+
+```text
+Identificacion (FNMT)
+    → Autenticacion (TOTP)
+    → Cifrado E2E (WebCrypto — AES-256-GCM)
+    → Firma (sobre digest del manifiesto)
+    → Envio (inbox seguro al destinatario)
+    → Evidencias (ledger inmutable con Merkle tree)
+```
+
+### Seguridad por diseno
+
+- **Only-4-your-eyes**: sin clave maestra. El proveedor de la plataforma no puede acceder al contenido
+- **Zero-knowledge**: el backend almacena exclusivamente ciphertext, nunca plaintext
+- **Cifrado en cliente**: la DEK se genera y se destruye en el navegador
+- **Append-only**: evidencias y ledger inmutables, sin operaciones de actualizacion ni borrado
+- **eIDAS**: niveles de garantia `low` / `substantial` / `high` segun fuente de identidad
+- **OWASP Top 10 compliance**: CSRF, XSS, SQLi, cabeceras de seguridad en todas las respuestas
 
 ## Autor
 

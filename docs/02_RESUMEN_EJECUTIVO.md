@@ -1,7 +1,7 @@
 # MARAChain — Resumen Ejecutivo
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Baseline ejecutiva aprobada  
 **Clasificación:** Fuente de verdad
 
@@ -38,6 +38,9 @@ MARAChain combinará:
 - auditoría y exportación de evidencias.
 
 El proveedor de firma recibirá exclusivamente el hash o digest necesario. No recibirá el documento.
+
+
+Las notificaciones por WhatsApp y Telegram se enviarán desde cuentas corporativas globales de MARAChain. Los remitentes no aportarán cuentas ni sesiones personales; solo indicarán los datos de contacto del destinatario. Estos canales serán avisos complementarios y no otorgarán acceso ni probarán la lectura del documento.
 
 ## 4. Diferenciadores
 
@@ -91,7 +94,7 @@ Quedarán fuera inicialmente:
 - organizaciones verificadas;
 - grupos masivos;
 - dispositivos temporales;
-- canales distintos del email.
+- activación productiva de canales distintos del email, aunque la arquitectura quedará preparada.
 
 ## 6. Segunda fase
 
@@ -101,6 +104,7 @@ Quedarán fuera inicialmente:
 - sello de tiempo;
 - API REST/OpenAPI;
 - integraciones empresariales;
+- avisos desde cuentas globales corporativas de WhatsApp y Telegram;
 - representación;
 - anclaje blockchain externo;
 - planes comerciales.

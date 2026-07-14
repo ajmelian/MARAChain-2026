@@ -1,7 +1,7 @@
 # MARAChain — Fuente de Verdad
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Baseline aprobada  
 **Clasificación:** Fuente de verdad del proyecto
 
@@ -27,6 +27,7 @@ En caso de contradicción, prevalece este orden:
 | `04_ARCHITECTURE.md` | Arquitectura de referencia, módulos, flujos y límites de confianza. |
 | `05_CASOS_DE_USO.md` | Catálogo funcional del MVP y de la segunda fase. |
 | `06_FRONTEND_DESIGN.md` | Baseline de diseño frontend, navegación, formularios, componentes y seguridad cliente. |
+| `07_NOTIFICATIONS.md` | Baseline de cuentas globales, canales, colas, seguridad y evidencias de notificación. |
 
 ## 3. Decisiones rectoras
 
@@ -40,6 +41,11 @@ En caso de contradicción, prevalece este orden:
 - Cada documento se representará en la interfaz mediante su `DocumentTransfer`, siguiendo una metáfora visual de correo con Inbox y Outbox.
 - La vista de perfil se basará en `horizontal/profile.html`.
 - La selección de documentos se basará en el componente Dropzone de `horizontal/form-upload.html`, con arrastrar y soltar o selección manual.
+- MARAChain dispondrá de una cuenta global corporativa de WhatsApp y una cuenta global corporativa de Telegram.
+- Los mensajes de ambos canales se enviarán siempre desde las cuentas globales de MARAChain, no desde cuentas o sesiones aportadas por el remitente.
+- El remitente únicamente facilitará los datos de contacto del destinatario; nunca credenciales, cookies, códigos QR ni sesiones de WhatsApp o Telegram.
+- WhatsApp y Telegram serán canales complementarios de aviso. No identificarán al destinatario, no concederán acceso documental y no constituirán prueba de lectura del documento.
+- Las credenciales y sesiones globales serán secretos de infraestructura, permanecerán fuera de `wwwroot`, Git, logs y ledger, y estarán separadas por entorno.
 - La plantilla Alpino descomprimida y su documentación se conservarán en `resources/frontend/alpino/original/` como material fuente no desplegable.
 - Las vistas adaptadas residirán en `wwwroot/app/Views/`; los assets seleccionados y saneados, en `wwwroot/public/assets/alpino/`; y la lógica JavaScript propia de MARAChain, en `wwwroot/public/assets/js/`.
 - El proceso de despliegue excluirá `resources/frontend/alpino/` y solo publicará las vistas y assets expresamente incorporados a `wwwroot`.
@@ -79,6 +85,9 @@ No impiden usar esta documentación, pero requieren PoC, ADR, contrato o revisi�
 - proveedor y topología final de infraestructura;
 - inventario, actualización o sustitución de dependencias heredadas de Alpino, Bootstrap 4, jQuery y Dropzone;
 - límites definitivos de tamaño, formatos y número de documentos por transferencia;
+- selección y PoC del SDK o protocolo de WhatsApp compatible con la cuenta global, incluyendo riesgo de bloqueo si la integración no es oficial;
+- selección del mecanismo de Telegram para la cuenta global y validación de las restricciones para iniciar conversaciones con destinatarios;
+- políticas de consentimiento, opt-out, rate limiting y prevención de abuso para WhatsApp y Telegram;
 - activación contractual y técnica de los canales Telegram, WhatsApp y SMS.
 
 ## 5. Gestión de cambios

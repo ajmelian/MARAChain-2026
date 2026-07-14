@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.5.0 | **Last Updated:** 2026-07-14
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -179,6 +179,8 @@ php spark migrate:status
 | App                 | 2026-07-13-100007_CreateContactsTable       | migrated   |
 | App                 | 2026-07-13-100008_CreateNotificationsTable  | migrated   |
 | App                 | 2026-07-14-400000_AddShieldUserIdToUsers    | migrated   |
+| App                 | 2026-07-14-500000_CreateNotificationReque.. | migrated   |
+| App                 | 2026-07-14-600000_CreateGlobalMessagingAc.. | migrated   |
 | Shield              | (auth tables)                               | migrated   |
 +---------------------+---------------------------------------------+------------+
 ```
@@ -217,8 +219,10 @@ mysql -u marachain_user -p marachain -e "SHOW TABLES;"
 | document_transfers          |
 | documents                   |
 | evidences                   |
+| global_messaging_accounts   |
 | ledger_blocks               |
 | migrations                  |
+| notification_requested      |
 | notifications               |
 | settings                    |
 | signature_requests          |
@@ -546,7 +550,7 @@ php spark shield:user create                    # Crear usuario
 # ── Comandos MARAChain ──
 php spark ledger:genesis                        # Bloque genesis
 php spark ledger:seal                           # Sellar evidencias
-php spark notification:send                     # Enviar notificaciones
+php spark notifications:send                     # Enviar notificaciones multi-canal
 
 # ── Testing ──
 php vendor/bin/phpunit                          # Todos los tests (178)

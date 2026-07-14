@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - WebCrypto client-side encryption for document uploads (Dropzone integration complete, pending full E2E flow)
 - IPFS private cluster storage integration
-- Email notification outbox with retry logic (SMTP integration)
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
 - API authentication (JWT/API keys for REST endpoints)
@@ -20,6 +19,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session fixation fix in FNMT flow (AP-2 from audit)
 - Rate limiting on TOTP routes (AP-3 from audit)
 - Replace inline PHP template strings with view files (AP-4 from audit)
+
+---
+
+## [1.5.0] - 2026-07-14
+
+### Added
+- **Notification system (`app/Notifications/`)** — multi-channel notification outbox with provider abstraction
+  - `NotificationChannel` enum (PHP 8.2+): `EMAIL`, `WHATSAPP`, `TELEGRAM`, `SMS`
+  - `NotificationProviderInterface` — contrato `send()` y `health()` para todos los canales
+  - `EmailNotificationProvider` — implementacion real SMTP via `EmailNotificationProvider`
+  - `WhatsAppNotificationProvider` — stub preparado para integracion futura (cuenta global corporativa)
+  - `TelegramNotificationProvider` — stub preparado para integracion futura (Bot API / MTProto)
+  - `SmsNotificationProvider` — stub preparado para integracion futura
+  - `RecipientAddress` value object — direccion del destinatario por canal
+  - `NotificationMessage` value object — contenido del mensaje (titulo, cuerpo, metadata)
+  - `NotificationResult` value object — resultado del envio (estado, id del proveedor, error)
+- **NotificationsCommand** (`app/Commands/NotificationsCommand.php`): `php spark notifications:send` — CLI worker para procesar el outbox transaccional. Reemplaza al anterior `NotificationSend` con soporte multi-canal y provider resolution.
+- **Global messaging accounts** — migracion `2026-07-14-600000_CreateGlobalMessagingAccountsTable.php`: tabla `global_messaging_accounts` para gestionar cuentas globales corporativas por canal y entorno. Estados: `PENDING_CONFIGURATION`, `CONNECTED`, `DEGRADED`, `DISCONNECTED`, `DISABLED`, `ERROR`. Una cuenta activa por canal y entorno.
+- **Notification outbox transaccional** — migracion `2026-07-14-500000_CreateNotificationRequestedTable.php`: tabla `notification_requested` como outbox transaccional con soporte para idempotencia, reintentos con backoff, circuit breaker, y dead-letter.
+
+### Changed
+- `NotificationSend` command legacy reemplazado por `NotificationsCommand` multi-canal
+- Arquitectura de notificaciones migrada de email-only a multi-canal con provider pattern
+- Documentacion actualizada: nuevo ADR-019, canales SMTP documentados en CONFIGURATION.md
+
+### Security
+- Secretos de proveedores (WhatsApp, Telegram) almacenados fuera de `wwwroot/` en `/var/lib/marachain/integrations/`
+- Referencias opacas en MySQL (nunca credenciales en texto claro)
+- Cifrado en reposo para credenciales de cuentas globales
+- Rotacion y revocacion de secretos por canal
+- Fallback por email si un canal complementario falla
+- Ningun contenido sensible (documento, CID, claves, hash) se envia en notificaciones
 
 ---
 

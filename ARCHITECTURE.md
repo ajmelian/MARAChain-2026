@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.4.0 | **Date:** 2026-07-14 | **Status:** MVP (Pre-alpha)
+> **Version:** 1.5.0 | **Date:** 2026-07-14 | **Status:** MVP (Pre-alpha)
 
 ## Overview
 
@@ -40,6 +40,7 @@ Domain → sin dependencia de framework
 | ADR-016 | `shield_user_id` como FK en tabla `users` | SHIELD gestiona autenticacion (INT PK `shield_users.id`); MARAChain gestiona identidad y negocio (UUID PK `users.id`). Linkage via FK con UNIQUE constraint. `BaseWebController::getAuthenticatedUserId()` resuelve el mapeo en cada peticion autenticada |
 | ADR-017 | `EvidenceService` como servicio de dominio | Registro de eventos de negocio (`DocumentSent`, `TransferAccepted`, etc.) centralizado. Cada evento incluye `aggregateType`, `aggregateId`, `eventType` y `payloadJson`. Append-only con verificacion de integridad via LedgerService |
 | ADR-018 | `Helpers/Uuid.php` — DRY UUID generation | Reemplaza `generateUuidV4()` duplicada en 10 archivos por una funcion helper centralizada `generate_uuid_v4()`. Cargada via `BaseController::$helpers = ['uuid']` |
+| ADR-019 | Sistema de notificaciones multi-canal con Provider Pattern | Notificaciones desacopladas por canal (Email, WhatsApp, Telegram, SMS) mediante `NotificationProviderInterface`. Cada canal es un provider independiente con contrato `send()`/`health()`. Outbox transaccional (`notification_requested`) con idempotencia, reintentos con backoff, circuit breaker, y dead-letter. Cuentas globales corporativas (`global_messaging_accounts`) gestionadas por canal y entorno. Los secretos de proveedores residen fuera de `wwwroot/` (`/var/lib/marachain/integrations/`). Stubs para canales futuros permiten desarrollo incremental sin bloquear el nucleo |
 
 ## Component Diagram
 
@@ -52,7 +53,7 @@ Domain → sin dependencia de framework
 │  │                  │  │    Web       │  │                           │   │
 │  │ UserController   │  │ AuthCtrl     │  │ ledger:genesis            │   │
 │  │ DeviceCtrl       │  │ FnmtCtrl     │  │ ledger:seal               │   │
-│  │ DocumentCtrl     │  │ TransfersCtrl│  │ notification:send         │   │
+│  │ DocumentCtrl     │  │ TransfersCtrl│  │ notifications:send        │   │
 │  │ DocumentUploadCtrl│ │ ContactsCtrl │  │                           │   │
 │  │ TransferCtrl     │  │ ProfileCtrl  │  └───────────┬───────────────┘   │
 │  │ SignatureCtrl    │  │ BaseWebCtrl  │              │                   │
@@ -82,6 +83,15 @@ Domain → sin dependencia de framework
 │           │  EvidenceService            │  (CI4 Entity)   │    │      │
 │           │  TimestampProviderInterface  └──────────────────┘    │      │
 │           │  LedgerAnchorInterface                               │      │
+│           │                                                     │      │
+│           │  ┌─ Notification Layer ──────────┐                   │      │
+│           │  │ NotificationProviderInterface │                   │      │
+│           │  │ ├── EmailProvider (SMTP)      │                   │      │
+│           │  │ ├── WhatsAppProvider (*)      │                   │      │
+│           │  │ ├── TelegramProvider (*)      │                   │      │
+│           │  │ └── SmsProvider (*)           │                   │      │
+│           │  │ (*) stubs futuros             │                   │      │
+│           │  └───────────────────────────────┘                   │      │
 │           └─────────────────────────────┴──────────────────┘    │      │
 │                                                                 │      │
 │  ┌──────────────────────────────────────────────────────────────┼───┐  │
@@ -133,9 +143,15 @@ Domain → sin dependencia de framework
    │  (clave envuelta en sobre criptografico)
    ▼
 7. Ledger (evidencias append-only)
-   │  Bloques con Merkle tree
-   │  Firmas criptograficas por bloque
-   │  Evidencias registradas via EvidenceService → LedgerService
+    │  Bloques con Merkle tree
+    │  Firmas criptograficas por bloque
+    │  Evidencias registradas via EvidenceService → LedgerService
+    ▼
+8. Notifications (multi-canal, outbox transaccional)
+    │  notification_requested → CLI worker
+    │  Provider pattern: Email (SMTP), WhatsApp, Telegram, SMS
+    │  Cuentas globales corporativas (global_messaging_accounts)
+    │  Secretos en /var/lib/marachain/integrations/
 ```
 
 ## Directory Tree (`wwwroot/`)
@@ -146,7 +162,8 @@ wwwroot/
 │   ├── Commands/
 │   │   ├── LedgerGenesis.php          # ledger:genesis — crear bloque genesis
 │   │   ├── LedgerSeal.php             # ledger:seal — sellar evidencias en bloque
-│   │   └── NotificationSend.php       # notification:send — procesar notificaciones
+│   │   ├── NotificationsCommand.php   # notifications:send — procesar notificaciones multi-canal
+│   │   └── NotificationSend.php       # [legacy] notification:send — reemplazado por NotificationsCommand
 │   ├── Config/
 │   │   ├── App.php                    # Configuracion general de la aplicacion
 │   │   ├── Auth.php                   # Configuracion de autenticacion SHIELD
@@ -231,6 +248,17 @@ wwwroot/
 │   │   ├── LedgerBlockModel.php       # createBlock, chain integrity
 │   │   ├── ContactModel.php           # CRUD + search
 │   │   └── NotificationModel.php      # outbox pattern, retry logic (atomic)
+│   ├── Notifications/
+│   │   ├── NotificationChannel.php             # Enum PHP: EMAIL, WHATSAPP, TELEGRAM, SMS
+│   │   ├── NotificationProviderInterface.php   # Contrato send()/health()
+│   │   ├── NotificationMessage.php             # Value object contenido del mensaje
+│   │   ├── NotificationResult.php              # Value object resultado del envio
+│   │   ├── RecipientAddress.php                # Value object direccion del destinatario
+│   │   └── Providers/
+│   │       ├── EmailNotificationProvider.php       # Implementacion real SMTP
+│   │       ├── WhatsAppNotificationProvider.php    # Stub para cuenta global WhatsApp
+│   │       ├── TelegramNotificationProvider.php    # Stub para cuenta global Telegram
+│   │       └── SmsNotificationProvider.php         # Stub para integracion SMS futura
 │   ├── Services/
 │   │   ├── EncryptionService.php      # AES-256-GCM encrypt/decrypt
 │   │   ├── EvidenceService.php         # Automatic business event recording
@@ -352,7 +380,7 @@ Comandos CLI accesibles via `php spark`:
 |---------|-------|---------|
 | `ledger:genesis` | `LedgerGenesis` | Crea el bloque genesis (#1) del ledger |
 | `ledger:seal` | `LedgerSeal` | Sella evidencias pendientes en un nuevo bloque |
-| `notification:send` | `NotificationSend` | Procesa notificaciones pendientes con reintentos |
+| `notifications:send` | `NotificationsCommand` | Procesa notificaciones multi-canal desde el outbox transaccional |
 
 ### Web Controllers (`app/Controllers/Web/`)
 
@@ -467,6 +495,8 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | 9 | `notifications` | `Notification` | `2026-07-13-100008` |
 | 10 | `auth_*` (SHIELD) | `UserIdentity`, `UserSecret` | `2026-07-13-200000`, `2026-07-14-300000` |
 | 11 | `users.shield_user_id` | FK → `shield_users.id` | `2026-07-14-400000` |
+| 12 | `notification_requested` | Outbox transaccional de notificaciones | `2026-07-14-500000` |
+| 13 | `global_messaging_accounts` | Cuentas globales por canal | `2026-07-14-600000` |
 
 ### Caracteristicas del esquema
 

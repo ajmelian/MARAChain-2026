@@ -1,7 +1,7 @@
 # MARAChain — Proyecto Técnico
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Baseline técnica aprobada  
 **Clasificación:** Fuente de verdad
 
@@ -493,9 +493,143 @@ Los workers se gestionarán mediante `systemd`.
 
 ## 21. Notificaciones
 
-El MVP utilizará email.
+### 21.1. Modelo de cuentas
 
-Las notificaciones nunca incluirán documento, CID, NIF completo, claves, tokens reutilizables o datos sensibles.
+MARAChain gestionará una cuenta global corporativa de WhatsApp y una cuenta global corporativa de Telegram.
+
+Los usuarios remitentes no conectarán sus cuentas personales y no aportarán sesiones, cookies, códigos QR, tokens o credenciales de estos servicios.
+
+Los datos introducidos en el formulario representarán únicamente la dirección del destinatario:
+
+- `whatsapp_account`: número normalizado del destinatario;
+- `telegram_account`: alias, identificador o dirección resoluble del destinatario;
+- `mobile_phone`: número destinado al canal SMS.
+
+### 21.2. Proveedores
+
+```php
+interface NotificationProviderInterface
+{
+    public function channel(): NotificationChannel;
+
+    public function send(
+        GlobalMessagingAccount $account,
+        RecipientAddress $recipient,
+        NotificationMessage $message
+    ): NotificationResult;
+
+    public function health(): ProviderHealth;
+}
+```
+
+Adaptadores previstos:
+
+```text
+EmailNotificationProvider
+GlobalWhatsAppNotificationProvider
+GlobalTelegramNotificationProvider
+SmsNotificationProvider
+```
+
+La elección del SDK, protocolo o gateway concreto será una decisión de infraestructura sometida a PoC y ADR. El dominio no dependerá de una biblioteca específica.
+
+### 21.3. Flujo
+
+```text
+DocumentTransfer AVAILABLE
+        ↓
+NotificationRequested
+        ↓
+Outbox transaccional
+        ↓
+Worker PHP
+        ↓
+Selección de canales habilitados
+        ├── Email
+        ├── WhatsApp global
+        └── Telegram global
+        ↓
+Registro del resultado técnico
+```
+
+El email será el canal operativo inicial. WhatsApp y Telegram se habilitarán por configuración cuando sus PoC y controles estén aprobados.
+
+### 21.4. Secretos de infraestructura
+
+Las sesiones o credenciales de las cuentas globales se almacenarán fuera de `wwwroot`:
+
+```text
+/var/lib/marachain/integrations/
+├── whatsapp/
+│   └── global/
+└── telegram/
+    └── global/
+```
+
+También podrán utilizarse un secret manager o un volumen cifrado equivalente.
+
+Requisitos:
+
+- separación entre desarrollo, preproducción y producción;
+- permisos mínimos del usuario de servicio;
+- cifrado en reposo;
+- referencia opaca desde MySQL;
+- ausencia en Git, logs, backups no cifrados y ledger;
+- rotación, revocación y health checks;
+- acceso administrativo auditado.
+
+### 21.5. Contenido del mensaje
+
+Las notificaciones podrán incluir:
+
+- nombre visible de MARAChain;
+- identificación minimizada del remitente;
+- título documental cuando la política lo permita;
+- aviso de disponibilidad;
+- enlace a MARAChain sin acceso directo;
+- fecha de expiración, si procede.
+
+Nunca incluirán:
+
+- documento;
+- CID;
+- NIF/NIE/CIF completo;
+- claves o sobres;
+- hash documental;
+- token de acceso duradero;
+- descripción sensible;
+- evidencias completas.
+
+### 21.6. Estados y evidencias
+
+Estados técnicos:
+
+- `QUEUED`;
+- `SENDING`;
+- `SENT`;
+- `DELIVERED`, solo cuando el canal lo informe;
+- `FAILED`;
+- `RETRYING`;
+- `DEAD_LETTER`.
+
+Eventos:
+
+- `notification.whatsapp.requested`;
+- `notification.whatsapp.sent`;
+- `notification.whatsapp.failed`;
+- `notification.telegram.requested`;
+- `notification.telegram.sent`;
+- `notification.telegram.failed`.
+
+Los acuses del canal no se interpretarán como lectura, aceptación o acceso al documento.
+
+### 21.7. Riesgos y restricciones
+
+- WhatsApp puede requerir una integración no oficial; su uso no tendrá SLA jurídico ni valor de entrega certificada.
+- Telegram puede limitar el inicio de conversaciones según el mecanismo elegido y la relación previa con el destinatario.
+- Se aplicarán consentimiento, opt-out, rate limiting, listas de bloqueo y prevención de abuso.
+- El fallo de un canal complementario no revertirá una transferencia documental ya confirmada.
+- El email actuará como fallback cuando corresponda.
 
 ## 22. Eliminación
 
@@ -734,7 +868,7 @@ El formulario de nuevo envío manejará:
 - título del documento, obligatorio;
 - descripción o motivación, obligatoria.
 
-El código postal se tratará como texto para conservar ceros iniciales. Los teléfonos se normalizarán preferentemente en E.164. Los canales adicionales no se considerarán identidades verificadas ni destinatarios autorizados.
+El código postal se tratará como texto para conservar ceros iniciales. Los teléfonos se normalizarán preferentemente en E.164. Los valores de Telegram y WhatsApp son direcciones del destinatario para las cuentas globales de MARAChain. No son credenciales, sesiones, identidades verificadas ni mecanismos de autorización documental.
 
 ### 29.7. Seguridad frontend
 
@@ -758,4 +892,7 @@ La baseline completa se define en `06_FRONTEND_DESIGN.md`.
 - matriz jurídica de retención;
 - infraestructura final;
 - calificación regulatoria;
+- SDK o protocolo definitivo para la cuenta global de WhatsApp;
+- mecanismo definitivo para la cuenta global de Telegram;
+- política de consentimiento, opt-out y prevención de abuso en mensajería;
 - SLA comercial.

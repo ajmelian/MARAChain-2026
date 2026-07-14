@@ -1,7 +1,7 @@
 # MARAChain — Arquitectura
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Arquitectura de referencia aceptada  
 **Clasificación:** Fuente de verdad
 
@@ -66,7 +66,7 @@ flowchart TB
 | Evidence | evidencias canonicalizadas |
 | Ledger | bloques, Merkle, firmas y checkpoints |
 | Storage | IPFS, pins, réplicas y reconciliación |
-| Notifications | email y proveedores futuros |
+| Notifications | email y cuentas globales corporativas de WhatsApp y Telegram, con adaptadores sustituibles |
 | Organizations | tenants y representación futura |
 | Administration | operaciones privilegiadas auditadas |
 | Billing | planes y cuotas futuras |
@@ -381,9 +381,72 @@ Rutas:
 - denegación de servicio;
 - ausencia inicial de validación longeva.
 
-## 21. Arquitectura frontend
+## 21. Arquitectura de notificaciones globales
 
-### 21.1. Capas
+### 21.1. Contexto
+
+```mermaid
+flowchart LR
+    T[DocumentTransfer AVAILABLE] --> O[Outbox de notificaciones]
+    O --> W[Worker PHP]
+    W --> E[Proveedor Email]
+    W --> WA[Cuenta global WhatsApp]
+    W --> TG[Cuenta global Telegram]
+    E --> R[Destinatario]
+    WA --> R
+    TG --> R
+```
+
+Las cuentas pertenecen a MARAChain. Los usuarios remitentes no aportan sesiones ni credenciales de mensajería.
+
+### 21.2. Límites de confianza
+
+```text
+Aplicación PHP
+    ↓ referencia opaca
+Secretos de infraestructura
+    ├── sesión global WhatsApp
+    └── sesión o credencial global Telegram
+```
+
+Las credenciales se mantienen fuera del webroot y se separan por entorno.
+
+### 21.3. Contratos
+
+```text
+Notifications Domain
+        ↓
+NotificationProviderInterface
+        ├── Email adapter
+        ├── Global WhatsApp adapter
+        └── Global Telegram adapter
+```
+
+El dominio no conocerá el SDK o protocolo concreto.
+
+### 21.4. Semántica
+
+- El mensaje identifica a MARAChain como emisor técnico.
+- El contenido puede indicar quién es el remitente documental.
+- La dirección WhatsApp o Telegram identifica el destino del aviso.
+- Un acuse del canal no equivale a acceso, lectura ni aceptación.
+- Los canales no conceden acceso documental.
+- El documento nunca se transmite por estos canales.
+
+### 21.5. Resiliencia
+
+- outbox transaccional;
+- reintentos con backoff;
+- idempotencia;
+- dead-letter;
+- circuit breaker por proveedor;
+- health checks;
+- fallback por email;
+- desactivación inmediata de un canal degradado.
+
+## 22. Arquitectura frontend
+
+### 22.1. Capas
 
 ```text
 Vistas CodeIgniter 4
@@ -399,7 +462,7 @@ WebCrypto
 
 Alpino será una base visual. No contendrá reglas de dominio ni lógica criptográfica.
 
-### 21.2. Separación entre fuente comercial y runtime
+### 22.2. Separación entre fuente comercial y runtime
 
 ```text
 Plantilla original y documentación
@@ -425,7 +488,7 @@ La separación evita:
 - incorporar plugins sin inventario;
 - dificultar la actualización o sustitución de dependencias.
 
-### 21.3. Navegación
+### 22.3. Navegación
 
 ```text
 /inbox            -> transferencias recibidas
@@ -440,7 +503,7 @@ La separación evita:
 
 La ruta posterior a la autenticación será `/inbox`.
 
-### 21.4. Pantallas Alpino de referencia
+### 22.4. Pantallas Alpino de referencia
 
 - Inbox: `mail-inbox.html`.
 - Detalle: `mail-single.html`.
@@ -460,13 +523,13 @@ profile.html -> app/Views/profile/show.php
 form-upload.html -> componente integrado en transfers/create.php
 ```
 
-### 21.5. Límite de confianza del cliente
+### 22.5. Límite de confianza del cliente
 
 El navegador es responsable del hashing, cifrado, gestión temporal de claves y descifrado. La plantilla no ejecutará directamente estas operaciones: invocará servicios JavaScript propios y versionados.
 
 El fichero original no cruzará el límite del navegador antes de cifrarse.
 
-## 22. ADR obligatorios
+## 23. ADR obligatorios
 
 - lenguaje y framework;
 - monolito modular;

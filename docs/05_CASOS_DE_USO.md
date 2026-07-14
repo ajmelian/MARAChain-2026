@@ -1,7 +1,7 @@
 # MARAChain — Casos de Uso
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Baseline funcional aprobada  
 **Clasificación:** Fuente de verdad
 
@@ -229,7 +229,7 @@ El proveedor nunca recibe el documento.
 8. Evidence registra.
 9. Ledger incorpora.
 10. Estado `AVAILABLE`.
-11. Email notifica.
+11. MARAChain encola email y, si están habilitados y existen datos de contacto, avisos desde sus cuentas globales de WhatsApp y Telegram.
 
 ---
 
@@ -267,7 +267,7 @@ El proveedor nunca recibe el documento.
 8. Registra la clave pública del destinatario.
 9. El remitente completa el envío.
 
-Los emails secundarios, Telegram, WhatsApp y SMS serán canales de contacto o notificación. No concederán acceso ni sustituirán la identidad verificada.
+Los emails secundarios, Telegram, WhatsApp y SMS serán direcciones de contacto o notificación del destinatario. Las cuentas emisoras de WhatsApp y Telegram pertenecen globalmente a MARAChain. El remitente no aporta sesiones ni credenciales. Estos canales no conceden acceso ni sustituyen la identidad verificada.
 
 ---
 
@@ -397,6 +397,66 @@ Se genera un paquete verificable con:
 
 ---
 
+## CU-NOTIF-002 — Enviar aviso desde la cuenta global de WhatsApp
+
+### Precondiciones
+
+- canal habilitado;
+- cuenta global de WhatsApp operativa;
+- número del destinatario válido;
+- consentimiento o base de contacto aplicable;
+- transferencia disponible.
+
+### Flujo principal
+
+1. El evento de transferencia genera `NotificationRequested`.
+2. Outbox crea una solicitud idempotente.
+3. El worker selecciona `GlobalWhatsAppNotificationProvider`.
+4. El proveedor utiliza la cuenta global de MARAChain.
+5. Envía un mensaje minimizado al número del destinatario.
+6. Registra el identificador técnico y el resultado.
+7. Genera evidencia técnica.
+
+### Reglas
+
+- el remitente no aporta cuenta ni sesión;
+- no se adjunta el documento;
+- el enlace exige autenticación;
+- un acuse no equivale a lectura documental;
+- el fallo no revierte la transferencia.
+
+---
+
+## CU-NOTIF-003 — Enviar aviso desde la cuenta global de Telegram
+
+### Precondiciones
+
+- canal habilitado;
+- cuenta global de Telegram operativa;
+- destinatario resoluble;
+- consentimiento o relación necesaria según el mecanismo;
+- transferencia disponible.
+
+### Flujo principal
+
+1. Outbox crea la solicitud.
+2. El worker selecciona `GlobalTelegramNotificationProvider`.
+3. El proveedor utiliza la cuenta global de MARAChain.
+4. Resuelve el destinatario.
+5. Envía el mensaje minimizado.
+6. Registra el resultado técnico.
+7. Genera evidencia.
+
+### Alternativas
+
+- destinatario no resoluble;
+- restricciones de privacidad;
+- cuenta global desconectada;
+- rate limit;
+- bloqueo del canal.
+
+---
+
 ## CU-DELETE-001 — Suprimir documento
 
 1. Se valida la legitimación.
@@ -463,9 +523,9 @@ La transferencia queda `LEDGER_PENDING` o se bloquea conforme a política.
 
 ---
 
-## CU-ERROR-003 — Fallo de email
+## CU-ERROR-003 — Fallo de un canal de notificación
 
-El envío no se revierte. La notificación queda pendiente.
+El envío documental no se revierte. La notificación queda pendiente, se reintenta según política y puede utilizar email como fallback. Los fallos de WhatsApp o Telegram se registran de forma independiente.
 
 ---
 
@@ -551,4 +611,7 @@ Los datos de contacto no implican autorización documental.
 - el frontend utiliza Alpino Horizontal;
 - la selección documental utiliza Dropzone sin auto-upload;
 - el fichero original nunca se envía antes del cifrado;
-- los canales de contacto no conceden acceso ni equivalen a identidad verificada.
+- los canales de contacto no conceden acceso ni equivalen a identidad verificada;
+- WhatsApp y Telegram se envían desde cuentas globales de MARAChain;
+- los remitentes no aportan sesiones o credenciales de mensajería;
+- los acuses de mensajería no equivalen a lectura o aceptación documental.

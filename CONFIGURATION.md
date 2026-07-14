@@ -1,6 +1,6 @@
 # Configuration Guide
 
-> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.5.0 | **Last Updated:** 2026-07-14
 
 This document describes all configuration options for the MARAChain application.
 
@@ -415,6 +415,96 @@ email.SMTPPass = 'smtp_password'
 email.protocol = 'smtp'
 ```
 
+### SMTP Connection Security
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `email.protocol` | `mail` | No | Protocol: `mail`, `sendmail`, `smtp` |
+| `email.SMTPHost` | `localhost` | For SMTP | SMTP server hostname |
+| `email.SMTPPort` | `25` | For SMTP | SMTP port (587 for TLS, 465 for SSL) |
+| `email.SMTPUser` | `''` | For SMTP | SMTP username |
+| `email.SMTPPass` | `''` | For SMTP | SMTP password |
+| `email.SMTPCrypto` | `''` | No | SMTP encryption: `tls` or `ssl` |
+| `email.fromEmail` | `''` | Yes | Sender email address |
+| `email.fromName` | `''` | No | Sender display name |
+
+---
+
+## Notification Channels
+
+MARAChain implements a multi-channel notification system with provider abstraction (`app/Notifications/`).
+
+### Channel Configuration
+
+Each notification channel is configured via environment variables and global messaging accounts (`global_messaging_accounts` table). Only one active account per channel and environment is allowed.
+
+| Channel | Provider Class | Status | Configuration |
+|---------|---------------|--------|--------------|
+| `EMAIL` | `EmailNotificationProvider` | **Active** | SMTP via `email.*` env vars |
+| `WHATSAPP` | `WhatsAppNotificationProvider` | Stub | Pending PoC — secretos en `/var/lib/marachain/integrations/whatsapp/global/` |
+| `TELEGRAM` | `TelegramNotificationProvider` | Stub | Pending PoC — secretos en `/var/lib/marachain/integrations/telegram/global/` |
+| `SMS` | `SmsNotificationProvider` | Stub | Pending integration — secreto en `/var/lib/marachain/integrations/sms/global/` |
+
+### Global Messaging Account States
+
+Cuentas globales en `global_messaging_accounts`:
+
+| State | Description |
+|-------|-------------|
+| `PENDING_CONFIGURATION` | Cuenta registrada, pendiente de configuracion de credenciales |
+| `CONNECTED` | Cuenta operativa y verificada (health check OK) |
+| `DEGRADED` | Cuenta operativa con rendimiento reducido |
+| `DISCONNECTED` | Cuenta temporalmente inaccesible |
+| `DISABLED` | Cuenta desactivada administrativamente |
+| `ERROR` | Cuenta en estado de error irreversible |
+
+### Secretos de Proveedores
+
+Las credenciales de canales de mensajeria (WhatsApp, Telegram, SMS) se almacenan **fuera de `wwwroot/`** en:
+
+```
+/var/lib/marachain/integrations/
+├── whatsapp/
+│   └── global/          # Sesion/cookies/tokens de cuenta global WhatsApp
+├── telegram/
+│   └── global/          # Token de Bot API o sesion MTProto
+└── sms/
+    └── global/          # API key de proveedor SMS
+```
+
+Requisitos de seguridad:
+- Separacion por entorno (staging/prod)
+- Cifrado en reposo
+- Permisos minimos (solo `www-data` lectura)
+- Referencia opaca desde MySQL (nunca la credencial en texto claro)
+- Excluidos de Git (`.gitignore`)
+- Excluidos de logs y ledger
+- Backups cifrados
+- Rotacion y revocacion via procedimiento administrativo
+
+### Notification CLI Worker
+
+```bash
+# Procesar outbox transaccional (todos los canales)
+php spark notifications:send
+
+# Forzar reintento de dead-letter
+php spark notifications:send --retry-dead
+```
+
+### Resiliencia
+
+| Mecanismo | Descripcion |
+|-----------|-------------|
+| Outbox transaccional | Escritura atomica en `notification_requested` junto con la operacion de negocio |
+| Idempotencia | `idempotency_key` evita envios duplicados |
+| Reintentos con backoff | Exponential backoff + jitter para evitar tormentas |
+| Circuit breaker | Desactivacion temporal de canal tras N fallos consecutivos |
+| Dead-letter | Mensajes que exceden maximo de reintentos van a `DEAD_LETTER` |
+| Health checks | `health()` en cada provider verifica conectividad del canal |
+| Fallback por email | Si un canal complementario falla, se envia por email |
+| Rate limiting | Control de frecuencia por canal y destinatario |
+
 ---
 
 ## Feature Flags
@@ -434,6 +524,11 @@ email.protocol = 'smtp'
 | SHIELD-user linkage (BaseWebController) | Active | 1.4.0 |
 | Dropzone JS + MARACrypto client encryption | Active | 1.4.0 |
 | Deploy scripts (staging/prod) | Active | 1.4.0 |
+| Notification system (multi-channel outbox) | Active | 1.5.0 |
+| Email notification provider (SMTP) | Active | 1.5.0 |
+| WhatsApp notification provider | Stub | 1.5.0 |
+| Telegram notification provider | Stub | 1.5.0 |
+| SMS notification provider | Stub | 1.5.0 |
 | IPFS integration | Planned | - |
 | Blockchain anchoring (external DLT) | Planned | - |
 | Playwright E2E tests | Planned | - |

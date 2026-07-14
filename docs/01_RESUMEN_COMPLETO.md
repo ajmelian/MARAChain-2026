@@ -1,7 +1,7 @@
 # MARAChain — Resumen Completo
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Baseline aprobada  
 **Clasificación:** Fuente de verdad
 
@@ -98,7 +98,7 @@ Los escenarios nativos serán C2C y relaciones en las que cada interviniente act
 - recepción y descarga;
 - almacenamiento en IPFS privado;
 - metadatos y ACL en MySQL;
-- notificaciones por email;
+- notificaciones por email y arquitectura preparada para avisos globales por WhatsApp y Telegram;
 - evidencias de autenticación, envío, acceso y descarga;
 - ledger interno;
 - auditoría administrativa sin acceso al contenido;
@@ -361,7 +361,45 @@ El formulario de nuevo envío solicitará los datos de identificación y contact
 
 La especificación completa se encuentra en `06_FRONTEND_DESIGN.md`.
 
-## 16. Evolución
+## 15. Notificaciones globales
+
+MARAChain gestionará una cuenta global corporativa de WhatsApp y una cuenta global corporativa de Telegram.
+
+```text
+Usuario remitente
+        ↓
+DocumentTransfer disponible
+        ↓
+Módulo Notifications
+        ├── Email
+        ├── Cuenta global WhatsApp
+        └── Cuenta global Telegram
+        ↓
+Destinatario
+```
+
+El remitente no conectará sus cuentas personales ni aportará sesiones de mensajería. Los campos de WhatsApp y Telegram del formulario de envío identificarán exclusivamente el destino del aviso.
+
+El mensaje se enviará bajo la identidad visible de MARAChain e indicará, dentro del contenido permitido, quién es el remitente documental.
+
+Los canales no enviarán:
+
+- el documento;
+- el CID;
+- claves o sobres;
+- hashes documentales;
+- NIF/NIE/CIF completos;
+- tokens duraderos;
+- descripciones sensibles;
+- evidencias completas.
+
+El destinatario deberá acceder a MARAChain y autenticarse para consultar el documento.
+
+Los acuses técnicos de los canales no equivaldrán a acceso, lectura o aceptación documental.
+
+Las credenciales globales serán secretos de infraestructura y se almacenarán fuera de `wwwroot`, Git, logs y ledger. La implementación concreta de cada adaptador se seleccionará mediante PoC.
+
+## 17. Evolución
 
 - identidad delegada;
 - firma delegada;
@@ -375,6 +413,6 @@ La especificación completa se encuentra en `06_FRONTEND_DESIGN.md`.
 - mayor disponibilidad;
 - clientes auxiliares solo si fueran necesarios.
 
-## 17. Conclusión
+## 18. Conclusión
 
 MARAChain se define como una plataforma documental centrada en identidad, confidencialidad, integridad y trazabilidad. Su arquitectura evita que el backend o los proveedores externos necesiten acceder al documento en claro y mantiene desacopladas identidad, firma, cifrado, almacenamiento y evidencia.

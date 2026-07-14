@@ -1,7 +1,7 @@
 # MARAChain — Diseño del Frontend
 
-**Versión:** 1.1.1  
-**Fecha:** 13 de julio de 2026  
+**Versión:** 1.2.0  
+**Fecha:** 14 de julio de 2026  
 **Estado:** Frontend Baseline aprobada  
 **Clasificación:** Fuente de verdad
 
@@ -300,7 +300,7 @@ Este valor modificará etiquetas y validaciones.
 - Los teléfonos se normalizarán preferentemente en formato E.164.
 - Los emails adicionales podrán introducirse uno por línea o separados por coma o punto y coma.
 - Los emails se normalizarán, validarán y deduplicarán.
-- La cuenta de Telegram se almacenará en forma normalizada.
+- La cuenta de Telegram del destinatario se almacenará en forma normalizada.
 - NIF/NIE/CIF y canales sensibles se cifrarán en persistencia.
 - Los datos personales no se enviarán al ledger ni a la blockchain externa.
 
@@ -315,6 +315,24 @@ Los siguientes valores son canales de contacto:
 - SMS.
 
 No son por sí mismos una identidad verificada y no conceden acceso documental.
+
+Los valores de WhatsApp y Telegram representan exclusivamente la dirección del destinatario. No son cuentas emisoras, credenciales ni sesiones.
+
+Las cuentas emisoras serán globales y propiedad de MARAChain:
+
+```text
+Cuenta global WhatsApp MARAChain -> número WhatsApp del destinatario
+Cuenta global Telegram MARAChain -> cuenta Telegram del destinatario
+```
+
+El usuario remitente nunca introducirá:
+
+- cookies;
+- tokens;
+- claves;
+- códigos QR;
+- archivos de sesión;
+- credenciales de WhatsApp o Telegram.
 
 El acceso se asociará a una `UserIdentity` autenticada y autorizada.
 
@@ -427,6 +445,7 @@ Perfil
 - dispositivos autorizados;
 - sesiones activas;
 - preferencias de notificación;
+- estado público de los canales globales disponibles;
 - actividad de seguridad relevante.
 
 ### 13.3. Datos prohibidos
@@ -442,7 +461,32 @@ No se mostrarán:
 - identificadores internos completos del proveedor;
 - NIF/NIE completo sin necesidad justificada.
 
-## 14. Componentes conceptuales
+## 14. Notificaciones globales en la interfaz
+
+El formulario mostrará WhatsApp y Telegram como datos opcionales del destinatario.
+
+No existirá una pantalla para que el remitente conecte cuentas personales.
+
+La interfaz podrá mostrar:
+
+- canal disponible;
+- canal no configurado;
+- dirección inválida;
+- aviso en cola;
+- aviso enviado;
+- fallo de aviso;
+- fallback por email.
+
+Las etiquetas deberán dejar claro que el mensaje será enviado por MARAChain:
+
+```text
+Avisar por WhatsApp desde MARAChain
+Avisar por Telegram desde MARAChain
+```
+
+No se utilizarán expresiones como “conectar mi WhatsApp” o “usar mi Telegram”.
+
+## 15. Componentes conceptuales
 
 - `TransferRow`.
 - `TransferStatusBadge`.
@@ -463,9 +507,9 @@ No se mostrarán:
 
 Aunque se implementen mediante vistas PHP y JavaScript, se tratarán como componentes con responsabilidades acotadas.
 
-## 15. Integración con CodeIgniter 4
+## 16. Integración con CodeIgniter 4
 
-### 15.1. Vistas
+### 16.1. Vistas
 
 ```text
 wwwroot/app/Views/
@@ -496,7 +540,7 @@ wwwroot/app/Views/
 └── administration/
 ```
 
-### 15.2. Assets
+### 16.2. Assets
 
 ```text
 wwwroot/public/assets/
@@ -527,7 +571,7 @@ wwwroot/public/assets/
 
 La lógica criptográfica no se incorporará a scripts de la plantilla.
 
-### 15.3. Mapeo entre fuentes Alpino y vistas
+### 16.3. Mapeo entre fuentes Alpino y vistas
 
 ```text
 resources/frontend/alpino/original/horizontal/mail-inbox.html
@@ -551,7 +595,7 @@ resources/frontend/alpino/original/horizontal/form-upload.html
 
 Los HTML originales no se servirán directamente y no contendrán rutas de aplicación activas.
 
-### 15.4. Política de copia y despliegue
+### 16.4. Política de copia y despliegue
 
 Solo se copiarán a `wwwroot/public/assets/alpino/` los recursos necesarios, inventariados y revisados.
 
@@ -572,16 +616,16 @@ wwwroot/public/assets/css/
 
 La pipeline deberá fallar si detecta documentación, demos, páginas HTML originales o plugins no autorizados dentro del artefacto productivo.
 
-## 16. Seguridad frontend
+## 17. Seguridad frontend
 
-### 16.1. Almacenamiento local
+### 17.1. Almacenamiento local
 
 - No almacenar documentos en `localStorage` o `sessionStorage`.
 - No almacenar claves privadas exportables en texto claro.
 - IndexedDB solo se utilizará después de definir el modelo de protección y las PoC.
 - El material temporal se liberará después de completar o cancelar la operación.
 
-### 16.2. Red y contenido
+### 17.2. Red y contenido
 
 - HTTPS obligatorio.
 - CSP estricta.
@@ -593,7 +637,7 @@ La pipeline deberá fallar si detecta documentación, demos, páginas HTML origi
 - Escape contextual de salida.
 - Saneamiento de contenido dinámico.
 
-### 16.3. Logging
+### 17.3. Logging
 
 No registrar en consola, telemetría o errores:
 
@@ -606,13 +650,13 @@ No registrar en consola, telemetría o errores:
 - tokens;
 - respuestas sensibles de proveedores.
 
-### 16.4. Dependencias heredadas
+### 17.4. Dependencias heredadas
 
 Bootstrap 4, jQuery, Dropzone y el resto de plugins del ZIP deberán inventariarse y auditarse.
 
 El hecho de que un componente forme parte de Alpino no lo aprueba automáticamente para producción.
 
-## 17. Accesibilidad
+## 18. Accesibilidad
 
 Objetivo mínimo: WCAG 2.1 AA o estándar vigente aprobado por el proyecto.
 
@@ -630,7 +674,7 @@ Requisitos:
 - tablas y bandejas adaptables;
 - modales con gestión correcta del foco.
 
-## 18. Responsive
+## 19. Responsive
 
 La interfaz deberá funcionar en:
 
@@ -641,7 +685,7 @@ La interfaz deberá funcionar en:
 
 Las operaciones de selección, cifrado y descarga deberán validar memoria y capacidades del dispositivo. Un dispositivo no compatible deberá mostrar un mensaje explícito y no iniciar un flujo inseguro.
 
-## 19. Estados vacíos y errores
+## 20. Estados vacíos y errores
 
 Se definirán vistas específicas para:
 
@@ -662,7 +706,7 @@ Se definirán vistas específicas para:
 
 Los errores técnicos no mostrarán stack traces, secretos o respuestas internas.
 
-## 20. Terminología
+## 21. Terminología
 
 | Término Alpino | Término MARAChain |
 |---|---|
@@ -677,7 +721,7 @@ Los errores técnicos no mostrarán stack traces, secretos o respuestas internas
 
 No se afirmará “leído” cuando solo se pueda probar acceso o descarga.
 
-## 21. Criterios de aceptación
+## 22. Criterios de aceptación
 
 - Después de autenticarse, el usuario llega a Inbox.
 - Inbox lista transferencias recibidas.
@@ -689,6 +733,9 @@ No se afirmará “leído” cuando solo se pueda probar acceso o descarga.
 - Los emails adicionales se validan individualmente y se deduplican.
 - Los teléfonos se normalizan.
 - Los canales de contacto no conceden acceso.
+- WhatsApp y Telegram se presentan como avisos enviados desde cuentas globales de MARAChain.
+- El remitente no puede introducir ni cargar sesiones o credenciales de mensajería.
+- Los acuses de mensajería no se presentan como lectura o aceptación documental.
 - Dropzone admite arrastrar y soltar y selección manual.
 - Dropzone no envía automáticamente el fichero original.
 - El fichero original no sale del navegador antes de cifrarse.
@@ -699,14 +746,14 @@ No se afirmará “leído” cuando solo se pueda probar acceso o descarga.
 - La navegación principal es utilizable por teclado.
 - Las acciones se ocultan o deshabilitan según estado y permisos.
 
-## 22. Aspectos pendientes de validación
+## 23. Aspectos pendientes de validación
 
 - tamaño máximo de documento;
 - formatos adicionales a PDF;
 - comportamiento definitivo en móviles con memoria limitada;
 - mecanismo de hashing incremental;
 - estrategia exacta de persistencia de claves;
-- activación real de Telegram, WhatsApp y SMS;
+- SDK, protocolo y activación real de las cuentas globales de Telegram, WhatsApp y SMS;
 - branding definitivo, logotipo y paleta MARAChain;
 - inventario de versiones y vulnerabilidades de los assets Alpino;
 - soporte de varios documentos por transferencia;

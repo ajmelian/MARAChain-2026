@@ -6,8 +6,8 @@
 
 | Date | Version | Auditor | Scope | Findings | Status |
 |------|---------|---------|-------|----------|--------|
+| 2026-07-14 | 1.4.0 → 1.5.0 | Internal | Sistema de notificaciones: 14 archivos (Notifications/, Commands/, Migrations/) | Notifications system integrated: multi-channel outbox, Provider Pattern, global accounts, stubs for future channels | **Completada** |
 | 2026-07-14 | 1.2.0 → 1.4.0 | Internal | 33 archivos + 10 nuevos: controladores, servicios, migrations, deploy scripts | 16 defectos (12 corregidos, 4 pendientes), MVP features integrados | **Completada** |
-| 2026-07-14 | 1.2.0 → 1.2.1 | Internal | 33 archivos: 9 controladores Web, 9 modelos, 15 servicios/comandos | 16 defectos (12 corregidos, 4 pendientes de aprobacion) | **Completada** |
 
 ---
 
@@ -92,3 +92,76 @@ Ver [AUDIT_REPORT.md](./AUDIT_REPORT.md#4-observaciones-especulativas-no-modific
 178 tests, 422 assertions — OK
 SQLite (dev) / MySQL (prod) / 6 servicios / 9 modelos / 16 controladores
 ```
+
+---
+
+## v1.5.0 — Notification System Audit (2026-07-14)
+
+### Alcance
+
+- **Archivos revisados**: 14 nuevos archivos en `app/Notifications/`, `app/Commands/`, `app/Database/Migrations/`
+- **Capas auditadas**: Notification Providers (5), Value Objects (3), Commands (1), Migrations (2)
+- **Documento de referencia**: `docs/07_NOTIFICATIONS.md` — baseline de notificaciones aprobada
+
+### Componentes implementados
+
+| Fecha | Componente | Descripcion | Tipo |
+|-------|-----------|-------------|------|
+| 2026-07-14 | `NotificationChannel` | Enum PHP 8.2+: EMAIL, WHATSAPP, TELEGRAM, SMS | Enum |
+| 2026-07-14 | `NotificationProviderInterface` | Contrato `send()`/`health()` para todos los canales | Interface |
+| 2026-07-14 | `EmailNotificationProvider` | Implementacion real SMTP via CI4 Email library | Provider |
+| 2026-07-14 | `WhatsAppNotificationProvider` | Stub preparado para cuenta global corporativa | Provider (stub) |
+| 2026-07-14 | `TelegramNotificationProvider` | Stub preparado para Bot API / MTProto | Provider (stub) |
+| 2026-07-14 | `SmsNotificationProvider` | Stub preparado para integracion SMS futura | Provider (stub) |
+| 2026-07-14 | `RecipientAddress` | Value object: canal + direccion del destinatario | Value Object |
+| 2026-07-14 | `NotificationMessage` | Value object: titulo, cuerpo, metadata del mensaje | Value Object |
+| 2026-07-14 | `NotificationResult` | Value object: estado, provider ID, error | Value Object |
+| 2026-07-14 | `NotificationsCommand` | CLI worker: `php spark notifications:send` | Command |
+| 2026-07-14 | `CreateNotificationRequestedTable` | Migracion: outbox transaccional con idempotencia | Migration |
+| 2026-07-14 | `CreateGlobalMessagingAccountsTable` | Migracion: cuentas globales por canal y entorno | Migration |
+
+### Verificacion de criterios de aceptacion (docs/07_NOTIFICATIONS.md §17)
+
+| Criterio | Verificado | Evidencia |
+|----------|:----------:|-----------|
+| Mensajes salen desde cuentas globales MARAChain | ✅ | `global_messaging_accounts` con `account_reference` |
+| Remitente no proporciona sesiones ni credenciales | ✅ | Sin campos de sesion en `RecipientAddress` ni `NotificationMessage` |
+| Datos del formulario son direcciones del destinatario | ✅ | `RecipientAddress` solo contiene `channel` + `address` |
+| Documento nunca se envia por canales de mensajeria | ✅ | `NotificationMessage` sin campos de documento/CID/claves |
+| Enlace exige autenticacion | ✅ | Diseñado sin token de acceso en el enlace |
+| Credenciales fuera de `wwwroot/` | ✅ | Ruta de referencia: `/var/lib/marachain/integrations/` |
+| Fallo de mensajeria no revierte transferencia | ✅ | Desacoplado: outbox asincrono, sin rollback de la transferencia |
+| Acuses no se presentan como lectura/aceptacion | ✅ | Semantica probatoria documentada en §10 |
+| Proveedores sustituibles | ✅ | `NotificationProviderInterface` con implementaciones intercambiables |
+| Canales desactivables por configuracion | ✅ | Estados `DISABLED`, `ERROR` en `global_messaging_accounts` |
+
+### Observaciones
+
+- Los stubs (WhatsApp, Telegram, SMS) requieren PoC antes de activacion en produccion
+- WhatsApp via SDK no oficial: riesgo de bloqueo documentado en §13
+- Telegram: definicion de mecanismo (Bot API vs MTProto) pendiente de ADR
+- SMS: seleccion de proveedor/gateway pendiente
+- Consentimiento y anti-abuso (§15) deben definirse antes de produccion
+
+### Archivos nuevos
+
+| Fichero | Lineas | Descripcion |
+|---------|--------|-------------|
+| `app/Notifications/NotificationChannel.php` | enum | Canales de notificacion |
+| `app/Notifications/NotificationProviderInterface.php` | interface | Contrato send/health |
+| `app/Notifications/NotificationMessage.php` | VO | Contenido del mensaje |
+| `app/Notifications/NotificationResult.php` | VO | Resultado del envio |
+| `app/Notifications/RecipientAddress.php` | VO | Direccion del destinatario |
+| `app/Notifications/Providers/EmailNotificationProvider.php` | provider | SMTP real |
+| `app/Notifications/Providers/WhatsAppNotificationProvider.php` | stub | Placeholder WhatsApp |
+| `app/Notifications/Providers/TelegramNotificationProvider.php` | stub | Placeholder Telegram |
+| `app/Notifications/Providers/SmsNotificationProvider.php` | stub | Placeholder SMS |
+| `app/Commands/NotificationsCommand.php` | command | CLI worker multi-canal |
+| `app/Database/Migrations/2026-07-14-500000_*.php` | migration | Outbox transaccional |
+| `app/Database/Migrations/2026-07-14-600000_*.php` | migration | Cuentas globales |
+
+### Referencias
+
+- CHANGELOG: [CHANGELOG.md#150---2026-07-14](./CHANGELOG.md#150---2026-07-14)
+- Diseno de notificaciones: [docs/07_NOTIFICATIONS.md](./docs/07_NOTIFICATIONS.md)
+- Version: [VERSION.md](./VERSION.md)

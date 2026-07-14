@@ -67,3 +67,27 @@ Ver [AUDIT_REPORT.md](./AUDIT_REPORT.md#4-observaciones-especulativas-no-modific
 - Informe completo: [AUDIT_REPORT.md](./AUDIT_REPORT.md)
 - CHANGELOG: [CHANGELOG.md#121---2026-07-14](./CHANGELOG.md#121---2026-07-14)
 - Version: [VERSION.md](./VERSION.md)
+
+---
+
+## v1.4.0 — MVP Feature Audit (2026-07-14)
+
+### Nuevos servicios y endpoints implementados
+
+| Fecha | Componente | Descripcion | Tests |
+|-------|-----------|-------------|:-----:|
+| 2026-07-14 | `StorageService` | Almacena ciphertext cifrado en BD. Valida marachain-envelope v1 | 178 |
+| 2026-07-14 | `DocumentUploadController` | `POST /documents/upload` — recibe envelope + archivo cifrado multipart | 178 |
+| 2026-07-14 | `EvidenceService` | Registro automatico de eventos de negocio (DocumentSent, TransferAccepted, etc.) | 178 |
+| 2026-07-14 | `TransferController::accept/reject` | `POST /transfers/:id/accept` y `POST /transfers/:id/reject` con evidencias | 178 |
+| 2026-07-14 | `TransfersController` (web) | inbox/outbox usan `DocumentTransferModel` real (ya no mock data) | 178 |
+| 2026-07-14 | `BaseWebController` | `getAuthenticatedUserId()` via SHIELD → custom user linkage | 178 |
+| 2026-07-14 | Dropzone JS | Cifrado client-side via `MARACrypto.encryptDocument()` antes del upload | 178 |
+| 2026-07-14 | `.env.example` | Configuracion MySQL + SMTP + encryption keys | 178 |
+
+### Estado final MVP
+
+```text
+178 tests, 422 assertions — OK
+SQLite (dev) / MySQL (prod) / 6 servicios / 9 modelos / 16 controladores
+```

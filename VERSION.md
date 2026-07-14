@@ -3,7 +3,7 @@
 ## Current Version
 
 ```
-Version:      1.2.0
+Version:      1.2.1
 Release Date: 2026-07-14
 Status:       Development (pre-alpha)
 Codename:     Genesis
@@ -58,6 +58,7 @@ PATCH — Bug fixes: backward-compatible fixes, security patches,
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
+| [1.2.1](./CHANGELOG.md#121---2026-07-14) | 2026-07-14 | Pre-alpha | Security audit: 12 corrections (crypto, integrity, race conditions, secrets), 178 tests |
 | [1.2.0](./CHANGELOG.md#120---2026-07-14) | 2026-07-14 | Pre-alpha | SHIELD auth, web frontend (Bootstrap 5 + Alpino), service layer, CLI commands, rate limiting, health check |
 | [1.1.1](./CHANGELOG.md#111---2026-07-13) | 2026-07-13 | Pre-alpha | 9 entities, 9 migrations, 9 models, 9 controllers, 164 tests |
 | [1.0.0](./CHANGELOG.md#100---2026-07-13) | 2026-07-13 | Initial | Project bootstrap, specs, roadmap |

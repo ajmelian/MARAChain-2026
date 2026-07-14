@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.2.0 | **Date:** 2026-07-14 | **Status:** Baseline aceptada
+> **Version:** 1.2.1 | **Date:** 2026-07-14 | **Status:** Baseline aceptada (con correcciones de auditoria)
 
 ## Overview
 
@@ -29,47 +29,62 @@ Domain → sin dependencia de framework
 | ADR-005 | SQLite :memory: para tests | Velocidad; aislamiento; sin dependencia de infraestructura |
 | ADR-006 | IPFS privado (no publico) | Confidencialidad de documentos; control de replicas |
 | ADR-007 | Ledger interno append-only | Trazabilidad criptografica sin dependencia de blockchain externa |
-| ADR-008 | SHIELD para autenticacion | Integracion nativa con CI4; soporte TOTP y sesiones |
+| ADR-008 | SHIELD para autenticacion | Integracion nativa con CI4; soporte TOTP, sesiones, y grupos de permisos |
 | ADR-009 | Patron `$datamap` en Entities | Mapeo camelCase (PHP) ↔ snake_case (MySQL) transparente |
 | ADR-010 | `SecurityHeaders` como filter global `after` | OWASP compliance sin acoplamiento al controlador |
+| ADR-011 | Capa de Servicios con interfaces (Ports & Adapters) | Abstraccion de proveedores externos (FNMT, firma, timestamping, anclaje DLT); permite testing con mocks y futura sustitucion de proveedores |
+| ADR-012 | `Throttle` filter basado en token bucket | Rate limiting configurable por grupo de ruta; protege endpoints de auth y API sin dependencia externa (Redis/memcached) |
+| ADR-013 | AES-256-GCM para secretos TOTP | Cifrado reversible con autenticacion (AEAD); reemplaza HMAC unidireccional que impedia verificacion recurrente |
+| ADR-014 | Controladores Web separados de API REST | Separacion de responsabilidades: API devuelve JSON, Web devuelve HTML con vistas; comparten modelos de persistencia |
 
 ## Component Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                       MARAChain (monolito)                       │
-│                                                                   │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────────┐ │
-│  │ Controllers  │  │   Filters   │  │        Entities          │ │
-│  │              │  │              │  │                          │ │
-│  │ UserController│  │ SecurityHdr │  │ User, Device, Document  │ │
-│  │ DeviceCtrl   │  │ forcehttps  │  │ Transfer, SignatureReq  │ │
-│  │ DocumentCtrl │  │ pagecache   │  │ Evidence, LedgerBlock   │ │
-│  │ TransferCtrl │  │ performance │  │ Contact, Notification   │ │
-│  │ SignatureCtrl│  │              │  │                          │ │
-│  │ EvidenceCtrl │  └─────────────┘  └──────────┬───────────────┘ │
-│  │ LedgerCtrl   │                               │                 │
-│  │ ContactCtrl  │                               ▼                 │
-│  │ NotifCtrl    │                     ┌──────────────────┐       │
-│  │ Home         │                     │     Models        │       │
-│  └──────┬───────┘                     │  (Query Builder)  │       │
-│         │                             │  CI4 Model Layer  │       │
-│         ▼                             └────────┬─────────┘       │
-│  ┌──────────────┐                              │                 │
-│  │  Validation  │                              ▼                 │
-│  │  9 groups    │                     ┌──────────────────┐       │
-│  │  CustomRules │                     │   Migrations     │       │
-│  └──────────────┘                     │  (CI4 Forge)     │       │
-│                                       └────────┬─────────┘       │
-│                                                │                 │
-│  ┌─────────────────────────────────────────────┼─────────────┐  │
-│  │                Infrastructure                │             │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │             │  │
-│  │  │  MySQL   │  │  SQLite  │  │  IPFS    │  │             │  │
-│  │  │ (prod)   │  │ (tests)  │  │(privado) │  │             │  │
-│  │  └──────────┘  └──────────┘  └──────────┘  │             │  │
-│  └─────────────────────────────────────────────┘             │  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         MARAChain (monolito modular)                     │
+│                                                                          │
+│  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────────┐   │
+│  │ Controllers REST │  │ Controllers  │  │      Commands (CLI)       │   │
+│  │                  │  │    Web       │  │                           │   │
+│  │ UserController   │  │ AuthCtrl     │  │ ledger:genesis            │   │
+│  │ DeviceCtrl       │  │ FnmtCtrl     │  │ ledger:seal               │   │
+│  │ DocumentCtrl     │  │ TransfersCtrl│  │ notification:send         │   │
+│  │ TransferCtrl     │  │ ContactsCtrl │  │                           │   │
+│  │ SignatureCtrl    │  │ ProfileCtrl  │  └───────────┬───────────────┘   │
+│  │ EvidenceCtrl     │  │ BaseWebCtrl  │              │                   │
+│  │ LedgerCtrl       │  │              │              ▼                   │
+│  │ ContactCtrl      │  └──────┬───────┘    ┌──────────────────┐         │
+│  │ NotifCtrl        │         │            │    Models         │         │
+│  │ HealthCtrl       │         │            │ (Query Builder)   │         │
+│  └────────┬─────────┘         │            └────────┬─────────┘         │
+│           │                   │                     │                   │
+│           ▼                   │                     ▼                   │
+│  ┌────────────────┐           │            ┌──────────────────┐         │
+│  │   Validation   │           │            │   Migrations     │         │
+│  │   9 groups +   │           │            │  (CI4 Forge)     │         │
+│  │   CustomRules  │           │            │  10 migrations   │         │
+│  └────────────────┘           │            └────────┬─────────┘         │
+│                               │                     │                   │
+│           ┌───────────────────┼─────────────────────┼───────────┐      │
+│           │           Services Layer                │           │      │
+│           │                                        │           │      │
+│           │  IdentityProviderInterface ─── FnmtIdentityProvider │      │
+│           │  SignatureProviderInterface              │           │      │
+│           │  EncryptionService                       ▼           │      │
+│           │  LedgerService              ┌──────────────────┐    │      │
+│           │  X509Service                │    Entities      │    │      │
+│           │  TimestampProviderInterface  │  9 entities     │    │      │
+│           │  LedgerAnchorInterface      │  (CI4 Entity)   │    │      │
+│           └─────────────────────────────┴──────────────────┘    │      │
+│                                                                 │      │
+│  ┌──────────────────────────────────────────────────────────────┼───┐  │
+│  │                Infrastructure                                │   │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │  │
+│  │  │  MySQL   │  │  SQLite  │  │  IPFS    │  │ Session  │   │   │  │
+│  │  │ (prod)   │  │ (tests)  │  │(privado) │  │(File/SHLD)│   │   │  │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │  │
+│  └──────────────────────────────────────────────────────────────┘   │  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Data Flow
@@ -109,33 +124,49 @@ Domain → sin dependencia de framework
 ```
 wwwroot/
 ├── app/
+│   ├── Commands/
+│   │   ├── LedgerGenesis.php          # ledger:genesis — crear bloque genesis
+│   │   ├── LedgerSeal.php             # ledger:seal — sellar evidencias en bloque
+│   │   └── NotificationSend.php       # notification:send — procesar notificaciones
 │   ├── Config/
-│   │   ├── App.php                  # Configuracion general de la aplicacion
+│   │   ├── App.php                    # Configuracion general de la aplicacion
+│   │   ├── Auth.php                   # Configuracion de autenticacion SHIELD
+│   │   ├── AuthGroups.php             # Grupos y permisos SHIELD
+│   │   ├── AuthToken.php              # Configuracion de tokens SHIELD
 │   │   ├── Boot/
-│   │   │   ├── development.php      # Entorno desarrollo (E_ALL, CI_DEBUG)
-│   │   │   ├── production.php       # Entorno produccion (no errores)
-│   │   │   └── testing.php          # Entorno testing
-│   │   ├── Database.php             # Conexiones: default (MySQL), tests (SQLite)
-│   │   ├── Filters.php              # SecurityHeaders global after
-│   │   ├── Routes.php               # 24+ endpoints REST
-│   │   ├── Validation.php           # 9 grupos de validacion
-│   │   ├── Constants.php            # Constantes del sistema
-│   │   ├── Encryption.php           # Configuracion de cifrado
-│   │   ├── Session.php              # Sesiones (SHIELD futuro)
-│   │   ├── Security.php             # Configuracion CSRF/Honeypot
-│   │   └── ...                      # Otros ficheros CI4 estandar
+│   │   │   ├── development.php        # Entorno desarrollo (E_ALL, CI_DEBUG)
+│   │   │   ├── production.php         # Entorno produccion (no errores)
+│   │   │   └── testing.php            # Entorno testing
+│   │   ├── Database.php               # Conexiones: default (MySQL), tests (SQLite)
+│   │   ├── Filters.php                # SecurityHeaders global after, csrf, throttle
+│   │   ├── Routes.php                 # 55+ rutas (REST + Web + Health)
+│   │   ├── Settings.php               # Configuracion SHIELD Settings
+│   │   ├── Validation.php             # 9 grupos de validacion
+│   │   ├── Constants.php              # Constantes del sistema
+│   │   ├── Encryption.php             # Configuracion de cifrado
+│   │   ├── Session.php                # Sesiones (SHIELD)
+│   │   ├── Security.php               # Configuracion CSRF/Honeypot
+│   │   └── ...                        # Otros ficheros CI4 estandar
 │   ├── Controllers/
-│   │   ├── BaseController.php       # camelToSnake(), validateGroup()
-│   │   ├── Home.php                 # Ruta raiz
-│   │   ├── UserController.php       # CRUD + enableTotp (6 endpoints)
-│   │   ├── DeviceController.php     # index, show, register, revoke (4 endpoints)
-│   │   ├── DocumentController.php   # CRUD + seal (5 endpoints)
-│   │   ├── TransferController.php   # CRUD + inbox, outbox, revoke (6 endpoints)
-│   │   ├── SignatureController.php  # request, show (2 endpoints)
-│   │   ├── EvidenceController.php   # index, show (2 endpoints)
-│   │   ├── LedgerController.php     # index, show, verify (3 endpoints)
-│   │   ├── ContactController.php    # CRUD (5 endpoints)
-│   │   └── NotificationController.php # index, show (2 endpoints)
+│   │   ├── BaseController.php         # camelToSnake(), validateGroup()
+│   │   ├── HealthController.php       # GET /health — health check endpoint
+│   │   ├── Home.php                   # Ruta raiz
+│   │   ├── UserController.php         # CRUD + enableTotp (6 endpoints)
+│   │   ├── DeviceController.php       # index, show, register, revoke (4 endpoints)
+│   │   ├── DocumentController.php     # CRUD + seal (5 endpoints)
+│   │   ├── TransferController.php     # CRUD + inbox, outbox, revoke (6 endpoints)
+│   │   ├── SignatureController.php    # request, show (2 endpoints)
+│   │   ├── EvidenceController.php     # index, show (2 endpoints)
+│   │   ├── LedgerController.php       # index, show, verify (3 endpoints)
+│   │   ├── ContactController.php      # CRUD (5 endpoints)
+│   │   ├── NotificationController.php # index, show (2 endpoints)
+│   │   └── Web/
+│   │       ├── AuthController.php     # login, register, logout (SHIELD)
+│   │       ├── BaseWebController.php  # render(), shared layout helpers
+│   │       ├── ContactsController.php # CRUD de contactos (HTML)
+│   │       ├── FnmtController.php     # mTLS + TOTP (FNMT certificate auth)
+│   │       ├── ProfileController.php  # Perfil de usuario (HTML)
+│   │       └── TransfersController.php# inbox, outbox, create (HTML)
 │   ├── Database/
 │   │   ├── Migrations/
 │   │   │   ├── 2026-07-13-100000_CreateUsersTable.php
@@ -150,58 +181,57 @@ wwwroot/
 │   │   └── Seeds/
 │   │       └── DatabaseSeeder.php
 │   ├── Entities/
-│   │   ├── User.php                 # identityType, TOTP, taxIdEncrypted
-│   │   ├── Device.php               # deviceType, publicKeyFingerprint
-│   │   ├── Document.php             # title, mimeType, fileHashSha256
-│   │   ├── DocumentTransfer.php     # securityLevel, idempotencyKey, ACL
-│   │   ├── SignatureRequest.php     # signatureIntent, manifestHash, nonce
-│   │   ├── Evidence.php             # eventId, payloadJson, aggregateType
-│   │   ├── LedgerBlock.php          # blockNumber, merkleRoot, blockHash
-│   │   ├── Contact.php              # contactType, emailPrimary, taxIdEncrypted
-│   │   └── Notification.php         # recipientEmail, notificationType, status
+│   │   ├── User.php                   # identityType, TOTP, taxIdEncrypted
+│   │   ├── Device.php                 # deviceType, publicKeyFingerprint
+│   │   ├── Document.php               # title, mimeType, fileHashSha256
+│   │   ├── DocumentTransfer.php       # securityLevel, idempotencyKey, ACL
+│   │   ├── SignatureRequest.php       # signatureIntent, manifestHash, nonce
+│   │   ├── Evidence.php               # eventId, payloadJson, aggregateType
+│   │   ├── LedgerBlock.php            # blockNumber, merkleRoot, blockHash
+│   │   ├── Contact.php                # contactType, emailPrimary, taxIdEncrypted
+│   │   └── Notification.php           # recipientEmail, notificationType, status
 │   ├── Filters/
-│   │   └── SecurityHeaders.php      # 7 cabeceras OWASP
+│   │   ├── SecurityHeaders.php        # 7 cabeceras OWASP
+│   │   └── Throttle.php               # Token bucket rate limiter
+│   ├── Language/
+│   │   └── en/
+│   │       └── Validation.php         # Mensajes de error en ingles
 │   ├── Models/
-│   │   ├── UserModel.php            # CRUD + TOTP management
-│   │   ├── DeviceModel.php          # register, revoke, markLost
-│   │   ├── DocumentModel.php        # CRUD + seal + version control
-│   │   ├── DocumentTransferModel.php # create, revokeTransfer, inbox/outbox
-│   │   ├── SignatureRequestModel.php # request, consume, validate
-│   │   ├── EvidenceModel.php        # append-only, aggregate queries
-│   │   ├── LedgerBlockModel.php     # createBlock, chain integrity
-│   │   ├── ContactModel.php         # CRUD + search
-│   │   └── NotificationModel.php    # outbox pattern, retry logic
+│   │   ├── UserModel.php              # CRUD + TOTP management + atomic ops
+│   │   ├── DeviceModel.php            # register, revoke, markLost
+│   │   ├── DocumentModel.php          # CRUD + seal + version control
+│   │   ├── DocumentTransferModel.php  # create, revokeTransfer (state machine), inbox/outbox
+│   │   ├── SignatureRequestModel.php  # request, consume, validate
+│   │   ├── EvidenceModel.php          # append-only, aggregate queries
+│   │   ├── LedgerBlockModel.php       # createBlock, chain integrity
+│   │   ├── ContactModel.php           # CRUD + search
+│   │   └── NotificationModel.php      # outbox pattern, retry logic (atomic)
+│   ├── Services/
+│   │   ├── EncryptionService.php      # AES-256-GCM encrypt/decrypt
+│   │   ├── FnmtIdentityProvider.php   # FNMT certificate identity resolution
+│   │   ├── IdentityProviderInterface.php # Identity provider abstraction
+│   │   ├── LedgerAnchorInterface.php  # External blockchain anchoring abstraction
+│   │   ├── LedgerService.php          # Block creation, Merkle tree, chain verification
+│   │   ├── SignatureProviderInterface.php # Signature provider abstraction
+│   │   ├── TimestampProviderInterface.php # Trusted timestamping abstraction
+│   │   └── X509Service.php            # X.509 certificate parsing
 │   └── Validation/
-│       └── CustomRules.php          # valid_tax_id, valid_phone_e164, valid_uuid
+│       └── CustomRules.php            # valid_tax_id, valid_phone_e164, valid_uuid, valid_hex
 ├── tests/
-│   ├── Unit/Models/                 # 9 model test files
-│   │   ├── UserModelTest.php
-│   │   ├── DeviceModelTest.php
-│   │   ├── DocumentModelTest.php
-│   │   ├── DocumentTransferModelTest.php
-│   │   ├── SignatureRequestModelTest.php
-│   │   ├── EvidenceModelTest.php
-│   │   ├── LedgerBlockModelTest.php
-│   │   ├── ContactModelTest.php
-│   │   └── NotificationModelTest.php
-│   ├── Unit/Controllers/            # 9 controller test files
-│   │   ├── UserControllerTest.php
-│   │   ├── DeviceControllerTest.php
-│   │   ├── DocumentControllerTest.php
-│   │   ├── TransferControllerTest.php
-│   │   ├── SignatureControllerTest.php
-│   │   ├── EvidenceControllerTest.php
-│   │   ├── LedgerControllerTest.php
-│   │   ├── ContactControllerTest.php
-│   │   └── NotificationControllerTest.php
-│   ├── unit/HealthTest.php
+│   ├── Unit/
+│   │   ├── Controllers/               # 9 controller test files
+│   │   ├── Models/                    # 9 model test files
+│   │   └── Services/
+│   │       └── LedgerServiceTest.php  # 14 tests: Merkle tree, genesis, sealing, verification
+│   ├── unit/
+│   │   └── HealthTest.php
 │   └── _support/
-├── public/                          # Document root (index.php)
-├── writable/                        # Logs, cache, sesiones
+├── public/                            # Document root (index.php)
+├── writable/                          # Logs, cache, sesiones
 ├── composer.json
 ├── phpunit.xml.dist
-├── env                              # .env template
-└── spark                            # CLI entry point
+├── env                                # .env template
+└── spark                              # CLI entry point
 ```
 
 ## Layer Descriptions
@@ -263,7 +293,52 @@ Capa de presentacion REST. Extienden `BaseController`:
 ### Filters (`app/Filters/`)
 
 - **SecurityHeaders.php**: aplica 7 cabeceras OWASP en cada respuesta HTTP
+- **Throttle.php**: token bucket rate limiter basado en archivos. Limites configurables por grupo de ruta (auth: 6 req/min, api: 60 req/min). Fingerprint via SHA1(IP + path). Retorna HTTP 429 con header `retry_after`.
 - Registrado como alias `security` y aplicado globalmente en `after`
+
+### Services (`app/Services/`)
+
+Capa de abstraccion de proveedores externos (patron Ports & Adapters):
+
+- **IdentityProviderInterface** — contrato de verificacion de identidad
+  - `FnmtIdentityProvider` — implementacion con certificados FNMT via mTLS
+- **SignatureProviderInterface** — abstraccion de proveedor de firma electronica
+- **TimestampProviderInterface** — abstraccion de sellado de tiempo confiable
+- **LedgerAnchorInterface** — abstraccion de anclaje en DLT externa
+- **EncryptionService** — cifrado/descifrado AES-256-GCM (AEAD) con claves de 32 bytes
+- **LedgerService** — creacion de bloques, arbol Merkle, verificacion de integridad de cadena. Usa transacciones de BD para atomicidad (sealBlock)
+- **X509Service** — parseo de certificados X.509, extraccion de DN, resolucion de identidad
+
+Los servicios no dependen de HTTP ni de CI4 Controllers. Reciben dependencias por constructor. Testeables con mocks.
+
+### Commands (`app/Commands/`)
+
+Comandos CLI accesibles via `php spark`:
+
+| Comando | Clase | Funcion |
+|---------|-------|---------|
+| `ledger:genesis` | `LedgerGenesis` | Crea el bloque genesis (#1) del ledger |
+| `ledger:seal` | `LedgerSeal` | Sella evidencias pendientes en un nuevo bloque |
+| `notification:send` | `NotificationSend` | Procesa notificaciones pendientes con reintentos |
+
+### Web Controllers (`app/Controllers/Web/`)
+
+Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
+
+- **AuthController** — login, register, logout via SHIELD. Con validacion frontend + backend. Rate limited via `throttle:auth`
+- **BaseWebController** — renderizado compartido, helpers de layout
+- **ContactsController** — CRUD de contactos con vistas HTML
+- **FnmtController** — autenticacion con certificado FNMT (mTLS) + TOTP. AES-256-GCM para secretos TOTP. Usa `$this->request->getServer()` para prevenir inyeccion de cabeceras SSL
+- **ProfileController** — pagina de perfil de usuario
+- **TransfersController** — bandeja de entrada, salida, creacion de transferencias
+
+Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API REST.
+
+### Filters (`app/Filters/`)
+
+- **SecurityHeaders.php**: aplica 7 cabeceras OWASP en cada respuesta HTTP
+- **Throttle.php**: token bucket rate limiter basado en archivos. Limites configurables por grupo de ruta (auth: 6 req/min, api: 60 req/min). Fingerprint via SHA1(IP + path). Retorna HTTP 429 con header `retry_after`.
+- Registrado como alias `security` y `throttle`
 
 ## API Design
 
@@ -314,10 +389,30 @@ Capa de presentacion REST. Extienden `BaseController`:
 | PUT | `/contacts/{id}` | `ContactController::update` | Actualizar contacto |
 | DELETE | `/contacts/{id}` | `ContactController::delete` | Eliminar contacto |
 | **Notifications** | | | |
-| GET | `/notifications` | `NotificationController::index` | Listar notificaciones |
-| GET | `/notifications/{id}` | `NotificationController::show` | Ver notificacion |
+| GET | `/health` | `HealthController::index` | Health check endpoint |
+| **Auth (Web)** | | | |
+| GET | `/login` | `Web\AuthController::login` | Login form |
+| POST | `/login` | `Web\AuthController::loginAction` | Process login |
+| GET | `/register` | `Web\AuthController::register` | Register form |
+| POST | `/register` | `Web\AuthController::registerAction` | Process registration |
+| GET/POST | `/logout` | `Web\AuthController::logout` | Logout |
+| **Transfers (Web)** | | | |
+| GET | `/inbox` | `Web\TransfersController::inbox` | Bandeja de entrada |
+| GET | `/outbox` | `Web\TransfersController::outbox` | Bandeja de salida |
+| GET | `/transfers/new` | `Web\TransfersController::create` | Nueva transferencia |
+| POST | `/transfers/new` | `Web\TransfersController::store` | Crear transferencia |
+| **Contacts (Web)** | | | |
+| GET | `/web/contacts` | `Web\ContactsController::index` | Listar contactos |
+| POST | `/web/contacts` | `Web\ContactsController::store` | Crear contacto |
+| GET/PUT/DELETE | `/web/contacts/{id}` | `Web\ContactsController` | Ver/editar/eliminar |
+| **Profile (Web)** | | | |
+| GET | `/profile` | `Web\ProfileController::index` | Perfil de usuario |
+| **FNMT Auth (Web)** | | | |
+| GET | `/auth/fnmt/init` | `Web\FnmtController::init` | Iniciar autenticacion FNMT |
+| GET | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP |
+| POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP |
 
-**Total: 37 rutas registradas (35 endpoints REST + 1 home + 1 ledger/verify)**
+**Total: 55+ rutas registradas (35+ REST API + 1 health + 18+ Web/Auth + 1 home + 1 ledger/verify)**
 
 ## Database
 
@@ -334,6 +429,7 @@ Capa de presentacion REST. Extienden `BaseController`:
 | 7 | `ledger_blocks` | `LedgerBlock` | `2026-07-13-100006` |
 | 8 | `contacts` | `Contact` | `2026-07-13-100007` |
 | 9 | `notifications` | `Notification` | `2026-07-13-100008` |
+| 10 | `auth_*` (SHIELD) | `UserIdentity`, `UserSecret` | `php spark shield:setup` |
 
 ### Caracteristicas del esquema
 
@@ -347,15 +443,20 @@ Capa de presentacion REST. Extienden `BaseController`:
 
 ## Security Architecture
 
-- **SHIELD** (planificado): autenticacion, autorizacion, sesiones
+- **SHIELD**: autenticacion session-based, autorizacion por grupos, proteccion CSRF
 - **SecurityHeaders**: filtro global `after` que aplica 7 cabeceras OWASP
+- **Throttle**: rate limiting configurable (token bucket basado en archivos)
 - **forcehttps**: filtro global `before` (redireccion HTTP → HTTPS)
-- **Cifrado AEAD**: NIF/NIE cifrado en reposo; busqueda via HMAC determinista
-- **WebCrypto**: cifrado extremo a extremo de documentos en navegador
-- **TOTP**: segundo factor con bloqueo tras 5 fallos (30 min)
+- **Cifrado AEAD**: NIF/NIE cifrado en reposo (AES-256-GCM); busqueda via HMAC determinista
+- **AES-256-GCM para TOTP**: secretos TOTP cifrados reversiblemente con autenticacion (reemplaza HMAC unidireccional)
+- **WebCrypto**: cifrado extremo a extremo de documentos en navegador (planificado)
+- **TOTP**: segundo factor con bloqueo atomico tras 5 fallos (30 min). `SET col = col + 1` evita TOCTOU
 - **UUID v4**: evita enumeracion de IDs
 - **Query Builder**: previene SQL injection (sin raw SQL)
+- **Transacciones BD**: operaciones multi-tabla atomicas (LedgerService, AuthController)
+- **Frontera de confianza**: `$this->request->getServer()` en lugar de `$_SERVER` (previene inyeccion de cabeceras SSL)
 - **Sin clave maestra**: modelo _only-4-your-eyes_
+- **Sin hardcoding de secretos**: variables `encryption.key` y `encryption.hmacKey` solo desde `.env`
 
 ## Testing
 
@@ -368,12 +469,21 @@ Capa de presentacion REST. Extienden `BaseController`:
 
 ### Suite actual
 
-- **164 tests** en 18 ficheros de test
-- **390 assertions**
+- **178 tests** en 22 ficheros de test
+- **422 assertions**
 - **9 model test files** en `tests/Unit/Models/`
 - **9 controller test files** en `tests/Unit/Controllers/`
+- **1 service test file** (`LedgerServiceTest`) en `tests/Unit/Services/` (14 tests)
 - **2 health tests** en `tests/unit/`
 - **Database tests**: `tests/database/ExampleDatabaseTest.php`
+
+### Tests de integridad del Ledger (14 tests en LedgerServiceTest)
+
+- Merkle tree: 6 tests (single leaf, 2/3/4 leaves, empty, deterministic)
+- Genesis block: 2 tests (creacion, doble creacion lanza excepcion)
+- Block sealing: 2 tests (sin evidencia → null, con evidencia → bloque #2)
+- Chain verification: 2 tests (cadena vacia, genesis solo, genesis+sellado)
+- Tamper detection: 1 test (hash manipulado detectado)
 
 ### Ejecucion
 

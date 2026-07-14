@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.2.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -153,8 +153,11 @@ php -r "echo 'encryption.key = ' . bin2hex(random_bytes(16)) . PHP_EOL;"
 ### 6. Run Migrations
 
 ```bash
-# Ejecutar todas las migraciones
+# Ejecutar todas las migraciones de aplicacion
 php spark migrate
+
+# Configurar autenticacion SHIELD
+php spark shield:setup
 
 # Verificar estado
 php spark migrate:status
@@ -175,6 +178,7 @@ php spark migrate:status
 | App                 | 2026-07-13-100006_CreateLedgerBlocksTable   | migrated   |
 | App                 | 2026-07-13-100007_CreateContactsTable       | migrated   |
 | App                 | 2026-07-13-100008_CreateNotificationsTable  | migrated   |
+| Shield              | (auth tables)                               | migrated   |
 +---------------------+---------------------------------------------+------------+
 ```
 
@@ -195,20 +199,30 @@ mysql -u marachain_user -p marachain -e "SHOW TABLES;"
 **Tablas esperadas:**
 
 ```
-+-----------------------+
-| Tables_in_marachain   |
-+-----------------------+
-| contacts              |
-| devices               |
-| document_transfers    |
-| documents             |
-| evidences             |
-| ledger_blocks         |
-| migrations            |
-| notifications         |
-| signature_requests    |
-| users                 |
-+-----------------------+
++-----------------------------+
+| Tables_in_marachain         |
++-----------------------------+
+| auth_groups                 |
+| auth_groups_users           |
+| auth_identities             |
+| auth_logins                 |
+| auth_permissions            |
+| auth_permissions_users      |
+| auth_remember_tokens        |
+| auth_token_logins           |
+| auth_tokens                 |
+| contacts                    |
+| devices                     |
+| document_transfers          |
+| documents                   |
+| evidences                   |
+| ledger_blocks               |
+| migrations                  |
+| notifications               |
+| settings                    |
+| signature_requests          |
+| users                       |
++-----------------------------+
 ```
 
 ---
@@ -231,7 +245,7 @@ php spark serve --port=8080
 ### 10. Run Tests
 
 ```bash
-# Todos los tests (164 tests, 390 assertions)
+# Todos los tests (178 tests, 422 assertions)
 php vendor/bin/phpunit
 
 # Solo tests unitarios
@@ -249,13 +263,13 @@ php vendor/bin/phpunit --verbose --testdox
 ```
 PHPUnit 10.5.x by Sebastian Bergmann and contributors.
 
-.............................................................   61 / 164
-.............................................................  122 / 164
-..........................................                    164 / 164
+.............................................................   61 / 178
+.............................................................  122 / 178
+.............................................................  178 / 178
 
 Time: 00:XX.XXX, Memory: XX.00 MB
 
-OK (164 tests, 390 assertions)
+OK (178 tests, 422 assertions)
 ```
 
 ### 11. Test API Endpoints
@@ -502,10 +516,11 @@ git clone git@github.com:your-org/marachain.git
 cd marachain/wwwroot
 composer install
 cp env .env
-nano .env                                    # Configurar MySQL
+nano .env                                    # Configurar MySQL + encryption.key
 php spark migrate
+php spark shield:setup                       # Configurar SHIELD auth
 php spark serve                              # http://localhost:8080
-php vendor/bin/phpunit                       # 164 tests
+php vendor/bin/phpunit                       # 178 tests
 
 # ── Comandos utiles ──
 php spark list                               # Listar comandos
@@ -523,9 +538,18 @@ composer update                              # Actualizar dependencias
 composer audit                               # Auditoria de seguridad
 composer dump-autoload                       # Regenerar autoloader
 
+# ── Autenticacion SHIELD ──
+php spark shield:setup                          # Configurar SHIELD
+php spark shield:user create                    # Crear usuario
+
+# ── Comandos MARAChain ──
+php spark ledger:genesis                        # Bloque genesis
+php spark ledger:seal                           # Sellar evidencias
+php spark notification:send                     # Enviar notificaciones
+
 # ── Testing ──
-php vendor/bin/phpunit                       # Todos los tests
-php vendor/bin/phpunit --testsuite unit      # Unit tests
-php vendor/bin/phpunit --filter UserModel    # Tests filtrados
-php vendor/bin/phpunit --coverage-text       # Cobertura
+php vendor/bin/phpunit                          # Todos los tests (178)
+php vendor/bin/phpunit --testsuite unit         # Unit tests
+php vendor/bin/phpunit --filter UserModel       # Tests filtrados
+php vendor/bin/phpunit --coverage-text          # Cobertura
 ```

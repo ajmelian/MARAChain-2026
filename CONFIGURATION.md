@@ -1,6 +1,6 @@
 # Configuration Guide
 
-> **Version:** 1.2.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
 
 This document describes all configuration options for the MARAChain application.
 
@@ -128,6 +128,42 @@ app.CSPEnabled = false
 encryption.key = hex64charstringhere
 ```
 
+### `app/Config/Auth.php` (SHIELD)
+
+Configuracion principal de autenticacion SHIELD:
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `$views` | `CodeIgniter\Shield\Config\Auth` views | Vistas de autenticacion |
+| `$recordActiveDate` | `true` | Registrar fecha de actividad del usuario |
+| `$allowRegistration` | `true` | Permitir registro de nuevos usuarios |
+| `$allowRemembering` | `true` | Permitir "recordarme" (Remember-me) |
+| `$sessionConfig` | `CodeIgniter\Shield\Config\Auth` | Configuracion de sesion |
+
+### `app/Config/AuthGroups.php` (SHIELD)
+
+Define grupos y permisos de autorizacion:
+
+| Grupo | Permisos |
+|-------|----------|
+| `superadmin` | Acceso total |
+| `admin` | Gestion de usuarios, documentos, configuracion |
+| `developer` | Acceso API, logs |
+| `user` | Acceso basico a documentos propios |
+
+### `app/Config/AuthToken.php` (SHIELD)
+
+Configuracion de tokens de acceso personal (PAT):
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `$recordLoginAttempt` | `Config\Auth::RECORD_LOGIN_ATTEMPT_*` | Registro de intentos |
+| `$allowAccessTokens` | `true` | Permitir tokens de acceso personal |
+
+### `app/Config/Settings.php` (SHIELD)
+
+Configuracion de almacenamiento de settings SHIELD. Usa base de datos por defecto.
+
 ### `app/Config/Session.php`
 
 | Property | Default | Description |
@@ -190,6 +226,8 @@ encryption.key = hex64charstringhere
 | `invalidchars` | `InvalidChars::class` | Security |
 | `secureheaders` | `SecureHeaders::class` | Security (CI4 built-in) |
 | `security` | `App\Filters\SecurityHeaders::class` | Security (MARAChain custom) |
+| `throttle` | `App\Filters\Throttle::class` | Rate Limiting (MARAChain custom) |
+| `session` | `CodeIgniter\Shield\Filters\SessionAuth::class` | Auth (SHIELD) |
 | `cors` | `Cors::class` | Security |
 | `forcehttps` | `ForceHTTPS::class` | Security |
 | `pagecache` | `PageCache::class` | Performance |
@@ -206,17 +244,47 @@ encryption.key = hex64charstringhere
 | `after` | `performance` | Performance metrics (required) |
 | `after` | `toolbar` | Debug toolbar (development only) |
 
+### Throttle Filter Configuration
+
+The `App\Filters\Throttle` filter implements a file-based token bucket rate limiter. Configured per route group in `Filters.php`:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `bucket capacity` | route-specific | Max requests allowed in the window |
+| `refill rate` | route-specific | Tokens added per minute |
+| `fingerprint` | `SHA1(IP + path)` | Unique identifier for the bucket |
+| `storage` | `WRITEPATH . 'throttle/'` | File-based bucket storage |
+
+**Route group configurations:**
+
+| Group | Capacity | Rate | Description |
+|-------|----------|------|-------------|
+| `auth` | 6 | 6/min | Login, register, TOTP verify |
+| `api` | 60 | 60/min | API REST endpoints |
+
+On limit exceeded, returns HTTP 429 with `retry_after` header.
+
+```php
+// Example: applying throttle to a route group
+$routes->group('', ['filter' => 'throttle:auth'], function($routes) {
+    $routes->post('login', 'Web\AuthController::loginAction');
+    $routes->post('register', 'Web\AuthController::registerAction');
+});
+```
+
 ---
 
 ## Route Configuration
 
 ### `app/Config/Routes.php`
 
-37 total routes defined:
+55+ total routes defined (35+ API REST + 18+ Web/Auth + 1 health + 1 home):
 
 | Group | Routes | Methods |
 |-------|--------|---------|
-| `/` | 1 | GET |
+| `/` (Home) | 1 | GET |
+| `/health` | 1 | GET |
+| **Auth (SHIELD)** | 5 | GET, POST |
 | `/users` | 6 | GET, POST, PUT, DELETE |
 | `/devices` | 4 | GET, POST, DELETE |
 | `/documents` | 5 | GET, POST, DELETE |
@@ -226,8 +294,14 @@ encryption.key = hex64charstringhere
 | `/ledger` | 3 | GET |
 | `/contacts` | 5 | GET, POST, PUT, DELETE |
 | `/notifications` | 2 | GET |
+| **Web (session-protected)** | 10 | GET, POST, PUT, DELETE |
+| **FNMT Auth** | 3 | GET, POST |
 
 **Route group feature**: `users`, `devices`, `documents`, `transfers`, `signatures`
+
+**Web routes** protected with `session` filter (SHIELD).
+
+**Auth routes** protected with `throttle:auth` filter (rate limiting).
 
 **Literal routes before wildcards**: `/transfers/sent`, `/transfers/received`, `/ledger/verify` are defined before `(:segment)` captures.
 
@@ -318,13 +392,21 @@ email.protocol = 'smtp'
 
 ## Feature Flags
 
-Currently, all features are in pre-alpha state. Feature flags will be introduced in future releases for:
-
-- SHIELD authentication
-- IPFS integration
-- FNMT certificate auth
-- WebCrypto client encryption
-- Blockchain anchoring (external DLT)
+| Feature | Status | Version |
+|---------|--------|---------|
+| SHIELD authentication | Active | 1.2.0 |
+| TOTP 2FA | Active | 1.2.1 (AES-256-GCM) |
+| Rate limiting (Throttle) | Active | 1.2.0 |
+| Health check endpoint | Active | 1.2.0 |
+| Web frontend (Bootstrap 5 + Alpino) | Active | 1.2.0 |
+| CLI commands (ledger, notifications) | Active | 1.2.0 |
+| Service layer (ports & adapters) | Active | 1.2.0 |
+| FNMT certificate auth (mTLS) | In Development | - |
+| IPFS integration | Planned | - |
+| WebCrypto client encryption | Planned | - |
+| Blockchain anchoring (external DLT) | Planned | - |
+| Playwright E2E tests | Planned | - |
+| Multi-tenancy | Planned | - |
 
 ---
 

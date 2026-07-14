@@ -19,6 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
 - API authentication (JWT/API keys for REST endpoints)
+- CSRF protection on all web forms (AP-1 from audit)
+- Session fixation fix in FNMT flow (AP-2 from audit)
+- Rate limiting on TOTP routes (AP-3 from audit)
+- Replace inline PHP template strings with view files (AP-4 from audit)
+
+---
+
+## [1.2.1] - 2026-07-14
+
+### Fixed
+- **Cryptography (CR-1)**: `FnmtController::decryptTotpSecret` returning empty string — replaced HMAC with AES-256-GCM AEAD for TOTP secret encryption/decryption. Existing users require TOTP re-enrollment.
+- **Data Integrity (CR-2)**: `LedgerService::sealBlock` without database transaction — wrapped in `transStart()`/`transComplete()` with rollback on failure.
+- **Chain Verification (CR-3)**: `verifyChain` tautological block hash verification — recomputed Merkle root now used before block hash computation.
+- **Race Condition (CR-4)**: TOCTOU in `incrementoTotpFailures` and `incrementAttemptCount` — replaced with atomic `SET col = col + 1` via Query Builder.
+- **State Machine (HI-6)**: `revokeTransfer` bypassed state transition validator — added `allowedTransitions()` guard.
+- **Concurrency (HI-7)**: `transitionStatus` without atomic state guard — added `->where('status', $row['status'])` to prevent lost updates.
+- **Error Suppression (HI-8)**: `@` operator in `NotificationSend::sendEmail` — removed; added `FILTER_VALIDATE_EMAIL` and `error_get_last()` logging.
+
+### Security
+- **Hardcoded Secret (HI-1)**: Removed `marachain-dev-key` HMAC fallback in `FnmtController` — now throws `RuntimeException` if env var unset.
+- **Swallowed Errors (HI-2)**: `AuthController::register` profile creation failure now logs critical, attempts user rollback, and returns error to user.
+- **Audit Trail Loss (HI-3)**: Evidence recording failures now logged at `critical` level with `EVIDENCE_LOST:` prefix and full stack trace.
+- **Trust Boundary (HI-4)**: Replaced `$_SERVER` with `$this->request->getServer()` in `FnmtController` to prevent SSL header injection.
+- **Type Safety (HI-5)**: `AuthController::updateLastLogin` now guards against null `$user->id` before calling model method.
+
+### Changed
+- Test suite expanded: 164→178 tests, 390→422 assertions (added 14 `LedgerServiceTest` tests)
+- `DocumentTransfer` entity: `REVOKED` added to allowed transitions from `PENDING_RECIPIENT`, `READY`, `SENDING`, `SENT`
 
 ---
 

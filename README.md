@@ -1,10 +1,11 @@
 # MARAChain
 
-[![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com/your-org/marachain)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue)](./VERSION.md)
+[![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com/ajmelian/MARAChain-2026)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue)](./VERSION.md)
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4623?style=flat)](https://codeigniter.com/)
-[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![SHIELD](https://img.shields.io/badge/SHIELD-1.3-EE4623?style=flat)](https://shield.codeigniter.com/)
+[![License](https://img.shields.io/badge/license-GPL%203.0-green)](./LICENSE)
 
 > Plataforma de intercambio seguro de documentacion con firma electronica
 
@@ -22,7 +23,7 @@ MARAChain es una plataforma SaaS para gestion, transmision y custodia segura de 
 | Lenguaje | PHP | 8.5 |
 | Base de datos | MySQL | 8.x |
 | Testing | PHPUnit (SQLite :memory:) | 10.x |
-| Autenticacion | SHIELD (planificado) | - |
+| Autenticacion | SHIELD | 1.3.x |
 | Almacenamiento | IPFS privado | - |
 | Frontend | Bootstrap 5 + HTML5 + WebCrypto | Latest |
 | IaC | VPS remoto via SFTP | - |
@@ -30,9 +31,10 @@ MARAChain es una plataforma SaaS para gestion, transmision y custodia segura de 
 ## Requisitos Previos
 
 - **PHP** >= 8.2 (recomendado 8.5)
-- **Extensiones PHP**: `openssl`, `sodium`, `intl`, `mbstring`, `json`, `curl`, `pdo_mysql`, `fileinfo`
+- **Extensiones PHP**: `openssl`, `sodium`, `intl`, `mbstring`, `json`, `curl`, `pdo_mysql`, `fileinfo`, `sqlite3`
 - **Composer** >= 2.x
 - **MySQL** >= 8.0
+- **Git** >= 2.x
 
 ## Instalacion Rapida
 
@@ -51,10 +53,13 @@ cp env .env
 # 4. Ejecutar migraciones
 php spark migrate
 
-# 5. Iniciar servidor
+# 5. Configurar autenticacion SHIELD
+php spark shield:setup
+
+# 6. Iniciar servidor
 php spark serve
 
-# 6. Ejecutar tests
+# 7. Ejecutar tests
 php vendor/bin/phpunit
 ```
 
@@ -73,14 +78,17 @@ marachain/
 ├── .opencode/openspec/                # Especificacion SDD + Roadmap
 ├── wwwroot/                           # Aplicacion CodeIgniter 4
 │   ├── app/
-│   │   ├── Config/                    # Routes, Validation, Filters, Database
-│   │   ├── Controllers/               # 9 controladores REST + BaseController
-│   │   ├── Database/Migrations/       # 9 migraciones
+│   │   ├── Commands/                  # 3 comandos CLI
+│   │   ├── Config/                    # Routes, Validation, Filters, SHIELD config
+│   │   ├── Controllers/               # 9 REST + 6 Web + Health + Base
+│   │   ├── Database/Migrations/       # 10 migraciones (9 app + SHIELD)
 │   │   ├── Entities/                  # 9 entidades (Entity CI4)
-│   │   ├── Filters/                   # SecurityHeaders
+│   │   ├── Filters/                   # SecurityHeaders, Throttle
+│   │   ├── Language/                  # Traducciones (en/Validation)
 │   │   ├── Models/                    # 9 modelos
+│   │   ├── Services/                  # 8 servicios/interfaces
 │   │   └── Validation/               # CustomRules
-│   ├── tests/                         # PHPUnit test suite
+│   ├── tests/                         # PHPUnit test suite (22 files)
 │   ├── public/                        # Document root
 │   └── writable/                      # Logs, cache, sesiones
 ├── README.md                          # Este fichero
@@ -89,7 +97,10 @@ marachain/
 ├── VERSION.md                         # Politica de versionado
 ├── CONFIGURATION.md                   # Guia de configuracion
 ├── SECURITY.md                        # Politica de seguridad
-└── INSTALL.md                         # Guia de instalacion
+├── INSTALL.md                         # Guia de instalacion
+├── AUDITORY.md                        # Trazabilidad de auditorias
+├── LICENSE                            # GPL-3.0-or-later
+└── .gitlab-ci.yml                     # Pipeline CI/CD
 ```
 
 ## Comandos Principales
@@ -106,12 +117,22 @@ php spark migrate:rollback       # Revertir ultima migracion
 php spark migrate:status         # Estado de migraciones
 php spark db:seed DatabaseSeeder # Poblar con datos de prueba
 
+# Autenticacion SHIELD
+php spark shield:setup           # Configurar SHIELD (tablas + config)
+php spark shield:user create     # Crear usuario SHIELD
+
+# Comandos MARAChain
+php spark ledger:genesis         # Crear bloque genesis del ledger
+php spark ledger:seal            # Sellar evidencias en nuevo bloque
+php spark notification:send      # Procesar notificaciones pendientes
+
 # CodeIgniter
 php spark list                   # Listar comandos disponibles
 php spark make:controller        # Generar controlador
 php spark make:model             # Generar modelo
 php spark make:migration         # Generar migracion
 php spark make:entity            # Generar entidad
+php spark make:command           # Generar comando CLI
 
 # Calidad de codigo
 php vendor/bin/phpunit           # PHPUnit
@@ -123,14 +144,17 @@ composer audit                   # Auditoria de dependencias
 ## Estado del Proyecto
 
 - **Fase**: MVP (Pre-alpha)
-- **Tests**: 164 tests, 390 assertions (SQLite :memory:)
+- **Tests**: 178 tests, 422 assertions (SQLite :memory:)
 - **Entidades**: 9 implementadas
-- **Migraciones**: 9 implementadas
+- **Migraciones**: 10 implementadas (9 app + SHIELD auth tables)
 - **Modelos**: 9 implementados
-- **Controladores REST**: 9 implementados (24+ endpoints)
-- **Validacion**: 9 grupos de reglas
-- **Seguridad**: Filtro SecurityHeaders activo (7 cabeceras OWASP)
-- **Autenticacion**: SHIELD planificado (pendiente de implementar)
+- **Controladores REST**: 9 implementados (35+ endpoints)
+- **Controladores Web**: 6 implementados (login, register, inbox, outbox, contacts, profile)
+- **Servicios**: 8 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor)
+- **CLI Commands**: 3 implementados (ledger:genesis, ledger:seal, notification:send)
+- **Validacion**: 9 grupos de reglas + 4 CustomRules
+- **Seguridad**: Filtro SecurityHeaders activo (7 cabeceras OWASP), Rate Limiting, SHIELD auth
+- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1)
 
 ## Documentacion
 
@@ -142,7 +166,8 @@ composer audit                   # Auditoria de dependencias
 | [CONFIGURATION.md](./CONFIGURATION.md) | Variables de entorno y configuracion |
 | [SECURITY.md](./SECURITY.md) | Politicas y medidas de seguridad |
 | [INSTALL.md](./INSTALL.md) | Guia de instalacion paso a paso |
+| [AUDITORY.md](./AUDITORY.md) | Trazabilidad de auditorias de codigo |
 
 ## Licencia
 
-MIT License — ver [LICENSE](./wwwroot/LICENSE) para detalles.
+GPL-3.0-or-later — ver [LICENSE](./LICENSE) para detalles.

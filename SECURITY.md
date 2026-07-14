@@ -1,6 +1,6 @@
 # Security Policy
 
-> **Version:** 1.2.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.2.1 | **Last Updated:** 2026-07-14
 
 MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evidencias criptograficas. La seguridad es un requisito fundamental, no una caracteristica opcional.
 
@@ -10,7 +10,8 @@ MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evid
 
 | Version | Status | Security Support |
 |---------|--------|-----------------|
-| 1.2.0 (pre-alpha) | In Development | Not yet in production |
+| 1.2.1 (pre-alpha) | In Development | Not yet in production |
+| 1.2.0 (pre-alpha) | EOL (superseded by 1.2.1) | Not released |
 | 1.1.1 (pre-alpha) | EOL (superseded) | Not released |
 | 1.0.0 (initial) | Archived | Not supported |
 
@@ -118,16 +119,31 @@ El NIF/NIE se almacena con cifrado de doble capa:
 
 ### 8. Session Security
 
-- Sesiones via `CodeIgniter\Session\Handlers\FileHandler` (por defecto)
-- Migracion futura a SHIELD para rotacion de sesion y proteccion CSRF
+- Sesiones gestionadas via SHIELD (`CodeIgniter\Shield\Filters\SessionAuth`)
+- Rotacion de sesion y proteccion CSRF integradas en SHIELD
 - Cookie `HttpOnly` y `Secure` en produccion
 - `forcehttps` filter redirige HTTP → HTTPS
 
-### 9. HTTPS Enforcement
+### 9. Rate Limiting
+
+- Implementado via `App\Filters\Throttle` — token bucket basado en archivos
+- **auth group**: 6 req/min (login, register, TOTP verify)
+- **api group**: 60 req/min (REST endpoints)
+- Fingerprint via SHA1(IP address + request path)
+- Retorna HTTP 429 con header `retry_after`
+- Sin dependencia externa (Redis/memcached) para MVP
+
+### 10. HTTPS Enforcement
 
 - `forcehttps` filtro global `before`
 - HSTS header con `max-age=31536000; includeSubDomains`
 - `$forceGlobalSecureRequests` configurable via `.env`
+
+### 11. Atomic Database Operations
+
+- `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico (evita TOCTOU)
+- `sealBlock()` envuelto en transaccion BD con rollback en fallo
+- State transitions con guarda atomica `->where('status', $row['status'])`
 
 ---
 
@@ -135,15 +151,15 @@ El NIF/NIE se almacena con cifrado de doble capa:
 
 | # | Riesgo | Medida Implementada | Estado |
 |---|--------|---------------------|--------|
-| A01 | Broken Access Control | SHIELD planificado; autorizacion por endpoint pendiente | ⚠️ Planificado |
-| A02 | Cryptographic Failures | AEAD para NIF, TOTP cifrado, encryption.key en .env, sin hardcoding | ✅ Implementado |
-| A03 | Injection | Query Builder (prepared statements), validacion regex, sin raw SQL | ✅ Implementado |
-| A04 | Insecure Design | SDD con OpenSpec, threat modeling (STRIDE/LINDDUN), ADR documentados | ✅ Implementado |
-| A05 | Security Misconfiguration | SecurityHeaders global, forcehttps, CSP, sin debug en produccion | ✅ Implementado |
-| A06 | Vulnerable Components | `composer audit`, `composer.lock`, dependencias minimas auditadas | ⚠️ Sin CI |
-| A07 | Auth Failures | TOTP con bloqueo progresivo, SHIELD planificado, UUID no enumerable | ⚠️ Planificado |
-| A08 | Software & Data Integrity | SHA-256 hashes para documentos, Merkle tree en ledger planificado | ⚠️ Planificado |
-| A09 | Logging & Monitoring | CI4 Logger, evidencias append-only planeadas, sin PII en logs | ⚠️ Planificado |
+| A01 | Broken Access Control | SHIELD session-based auth con grupos de permisos; rutas web protegidas con `session` filter | ✅ Implementado |
+| A02 | Cryptographic Failures | AES-256-GCM para NIF y TOTP, encryption.key en .env, sin hardcoding, HMAC para busqueda | ✅ Implementado |
+| A03 | Injection | Query Builder (prepared statements), validacion regex identica front/back, sin raw SQL | ✅ Implementado |
+| A04 | Insecure Design | SDD con OpenSpec, threat modeling (STRIDE/LINDDUN), ADR documentados, auditoria de seguridad (v1.2.1) | ✅ Implementado |
+| A05 | Security Misconfiguration | SecurityHeaders global, forcehttps, CSP, Throttle rate limiting, sin debug en prod | ✅ Implementado |
+| A06 | Vulnerable Components | `composer audit`, `composer.lock`, dependencias minimas auditadas, CI/CD con auditoria | ⚠️ Sin CI |
+| A07 | Auth Failures | SHIELD + TOTP con bloqueo atomico (5 fallos), rate limiting en login/register, UUID no enumerable | ✅ Implementado |
+| A08 | Software & Data Integrity | SHA-256 hashes para documentos, Merkle tree en ledger, verificacion de cadena, transacciones atomicas | ✅ Implementado |
+| A09 | Logging & Monitoring | CI4 Logger, evidencias append-only con `EVIDENCE_LOST` logging, health endpoint, sin PII en logs | ✅ Implementado |
 | A10 | SSRF | N/A en MVP (sin fetch remoto); validacion futura de webhooks | N/A |
 
 ### OWASP ASVS Target
@@ -169,17 +185,11 @@ composer audit
 | Paquete | Version | Auditoria |
 |---------|---------|-----------|
 | `codeigniter4/framework` | `^4.7` | Comunidad activa, releases frecuentes |
+| `codeigniter4/shield` | `^1.3` | Auth oficial CI4, mantenido por BCIT |
+| `codeigniter4/settings` | `^2.3` | Settings oficial CI4, mantenido por BCIT |
 | `phpunit/phpunit` | `^10.5.16` | Dev only, no incluido en produccion |
 | `fakerphp/faker` | `^1.9` | Dev only, para seeds de prueba |
 | `mikey179/vfsstream` | `^1.6` | Dev only, mock de filesystem |
-
----
-
-## Rate Limiting
-
-- **Estado**: Placeholder (no implementado en 1.1.1)
-- **Plan**: Rate limiting en endpoints publicos via CI4 Throttle filter
-- **Endpoints criticos**: `/users`, `/transfers`, `/signatures`, TOTP verification
 
 ---
 
@@ -205,12 +215,16 @@ Antes de cada merge a `develop`:
 
 - [ ] `composer audit` sin vulnerabilidades criticas/altas
 - [ ] Tests de seguridad incluidos en la feature
-- [ ] Validacion de inputs en backend (CI4 rules)
+- [ ] Validacion de inputs en backend (CI4 rules) y frontend (JS)
 - [ ] Sin raw SQL ni concatenacion
 - [ ] Sin `var_dump()`, `die()`, `echo` de datos sensibles
+- [ ] Sin `@` error suppression en operaciones criticas
 - [ ] Sin secretos en el diff (`git diff --cached | grep -i password`)
 - [ ] Security headers activos en todas las respuestas
+- [ ] Rate limiting aplicado en rutas publicas
 - [ ] UUID v4 generado via `random_bytes()` (no `uniqid()`)
+- [ ] Transiciones de estado con guarda atomica
+- [ ] Operaciones multi-tabla en transaccion BD
 - [ ] Code review con checklist OWASP completada
 - [ ] Commit message sigue Conventional Commits
 
@@ -222,12 +236,12 @@ Antes de cada merge a `develop`:
 
 | Threat | Module | Mitigation |
 |--------|--------|------------|
-| **S**poofing | Authentication | FNMT cert + TOTP (planificado) |
-| **T**ampering | Documents | SHA-256 hash + Merkle tree |
-| **R**epudiation | Evidence | Ledger append-only con firma |
-| **I**nfo Disclosure | Encryption | WebCrypto E2E, AEAD en NIF, only-4-your-eyes |
-| **D**oS | Transfers | Rate limiting (planificado) |
-| **E**levation | Administration | Auditoria de operaciones privilegiadas |
+| **S**poofing | Authentication | SHIELD sessions + FNMT cert mTLS + TOTP 2FA |
+| **T**ampering | Documents | SHA-256 hash + Merkle tree + ledger append-only |
+| **R**epudiation | Evidence | Ledger append-only con firma; transacciones BD atomicas |
+| **I**nfo Disclosure | Encryption | AES-256-GCM (NIF, TOTP), WebCrypto E2E (plan), only-4-your-eyes |
+| **D**oS | Transfers | Throttle rate limiting (auth: 6/min, api: 60/min) |
+| **E**levation | Administration | SHIELD grupos de permisos; auditoria de operaciones privilegiadas |
 
 ### LINDDUN (Privacy)
 

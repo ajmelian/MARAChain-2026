@@ -66,6 +66,9 @@ $this->extend('layouts/main');
 
                         <?= csrf_field() ?>
 
+                        <input type="hidden" id="encrypted-doc-id" name="encryptedDocId" value="">
+                        <input type="hidden" id="encrypted-hash" name="encryptedHash" value="">
+
                         <!-- ============================================
                              RECIPIENT SECTION
                              ============================================ -->

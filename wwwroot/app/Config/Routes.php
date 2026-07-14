@@ -95,6 +95,7 @@ $routes->group('documents', static function (RouteCollection $routes): void {
     $routes->get('/',                'DocumentController::index');
     $routes->get('(:segment)',       'DocumentController::show/$1');
     $routes->post('/',               'DocumentController::create');
+    $routes->post('upload',          'DocumentUploadController::upload');
     $routes->post('(:segment)/seal', 'DocumentController::seal/$1');
     $routes->delete('(:segment)',    'DocumentController::delete/$1');
 });

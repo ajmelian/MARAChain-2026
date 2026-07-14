@@ -3,20 +3,16 @@
  *
  * Vanilla JS drag-and-drop file upload area.
  * PDF-only, no auto-upload, drag-and-drop + click-to-select.
- * Uses MARACrypto for client-side file hashing.
+ * Uses MARACrypto for client-side file hashing and encryption.
  *
  * @package MARAChain\Assets\JS
- * @author  Aythami
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
  * @since   1.4.0
  */
 document.addEventListener('DOMContentLoaded', () => {
     const dropzoneEl = document.getElementById('dropzone-area');
+    if (!dropzoneEl) return;
 
-    if (!dropzoneEl) {
-        return;
-    }
-
-    // ── Prevent default browser drag behaviours ──
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropzoneEl.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -24,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Visual feedback on drag hover ──
     ['dragenter', 'dragover'].forEach(eventName => {
         dropzoneEl.addEventListener(eventName, () => {
             dropzoneEl.classList.add('border-primary', 'bg-light');
@@ -37,149 +32,177 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Handle file drop ──
     dropzoneEl.addEventListener('drop', (e) => {
         const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileSelection(files[0]);
-        }
+        if (files.length > 0) handleFileSelection(files[0]);
     });
 
-    // ── Handle file input change ──
     const fileInput = document.getElementById('document-file');
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelection(e.target.files[0]);
-            }
+            if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
         });
     }
 
-    // ── Click on dropzone opens file dialog ──
     dropzoneEl.addEventListener('click', () => {
-        if (fileInput) {
-            fileInput.click();
-        }
+        if (fileInput) fileInput.click();
     });
+
+    // ── Form submit handler: encrypt before upload ──
+    const form = document.getElementById('transfer-form');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!window._selectedFile) {
+                showFileError('Selecciona un documento PDF antes de enviar.');
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const statusEl = document.getElementById('encryption-status');
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="zmdi zmdi-spinner zmdi-hc-spin"></i> Cifrando documento...';
+            }
+
+            try {
+                const result = await MARACrypto.encryptDocument(window._selectedFile);
+
+                if (statusEl) {
+                    statusEl.innerHTML = '<div class="alert alert-success mt-2 mb-0">'
+                        + '<i class="zmdi zmdi-check-circle"></i> '
+                        + '<strong>Documento cifrado.</strong> SHA-256: '
+                        + escapeHtml(result.fileHash.substring(0, 16)) + '&hellip;</div>';
+                }
+
+                // Build marachain-envelope v1
+                const envelope = {
+                    format: 'marachain-envelope',
+                    version: 1,
+                    contentCipher: 'AES-256-GCM',
+                    manifestHash: result.fileHash,
+                    recipients: [],
+                    iv: result.iv
+                };
+
+                const metadata = {
+                    title: form.querySelector('#document-title')?.value || 'Sin titulo',
+                    description: form.querySelector('#document-description')?.value || '',
+                    mimeType: 'application/pdf',
+                    fileSize: window._selectedFile.size,
+                    fileHashSha256: result.fileHash,
+                    ownerId: form.querySelector('#owner-id')?.value || ''
+                };
+
+                // Submit via FormData
+                const formData = new FormData();
+                formData.append('envelope', JSON.stringify(envelope));
+                formData.append('metadata', JSON.stringify(metadata));
+                formData.append('file', new Blob([result.ciphertext], { type: 'application/octet-stream' }),
+                    window._selectedFile.name + '.enc');
+
+                const csrfToken = form.querySelector('input[name="csrf_token_name"]')?.value || '';
+                if (csrfToken) formData.append('csrf_token_name', csrfToken);
+
+                const response = await fetch('/documents/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const docId = data.data?.documentId || '';
+                    document.getElementById('encrypted-doc-id').value = docId;
+                    document.getElementById('encrypted-hash').value = result.fileHash;
+
+                    if (statusEl) {
+                        statusEl.innerHTML = '<div class="alert alert-success mt-2 mb-0">'
+                            + '<i class="zmdi zmdi-check-circle"></i> '
+                            + '<strong>Documento subido y cifrado correctamente.</strong></div>';
+                    }
+
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="zmdi zmdi-send"></i> Enviar transferencia';
+                    }
+                } else {
+                    throw new Error(data.messages?.envelope || data.message || 'Error al subir el documento.');
+                }
+            } catch (err) {
+                console.error('MARAChain upload error:', err);
+                if (statusEl) {
+                    statusEl.innerHTML = '<div class="alert alert-danger mt-2 mb-0">'
+                        + '<i class="zmdi zmdi-alert-triangle"></i> '
+                        + '<strong>Error:</strong> ' + escapeHtml(err.message) + '</div>';
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="zmdi zmdi-send"></i> Reintentar envio';
+                }
+            }
+        });
+    }
 });
 
-/**
- * Handle a file selected by the user (via drag-drop or file input).
- *
- * Validates the file is a PDF, displays file information,
- * shows encryption status, and computes SHA-256 hash asynchronously.
- *
- * @param {File} file The selected PDF file.
- *
- * @since 1.4.0
- */
 function handleFileSelection(file) {
     const info = document.getElementById('file-info');
     const status = document.getElementById('encryption-status');
-    const fileUploadedInput = document.getElementById('file-uploaded');
-    const fileErrorEl = document.getElementById('file-error');
 
-    // ── Validate PDF type ──
     if (file.type !== 'application/pdf') {
         showFileError('Solo se permiten archivos PDF.');
-        if (fileUploadedInput) {
-            fileUploadedInput.value = '0';
-        }
         window._selectedFile = null;
         window._fileHash = null;
         return;
     }
 
-    // Clear any previous error
-    if (fileErrorEl) {
-        fileErrorEl.style.display = 'none';
-    }
+    document.getElementById('file-error')?.style &&
+        (document.getElementById('file-error').style.display = 'none');
 
-    // Mark file as uploaded
-    if (fileUploadedInput) {
-        fileUploadedInput.value = '1';
-    }
-
-    // ── Display file information ──
     if (info) {
         const sizeKB = (file.size / 1024).toFixed(0);
-        info.innerHTML = [
-            '<div class="d-flex align-items-center">',
-            '  <i class="zmdi zmdi-file-text text-primary mr-2"></i>',
-            '  <div>',
-            '    <strong>' + escapeHtml(file.name) + '</strong><br>',
-            '    <small class="text-muted">' + sizeKB + ' KB — PDF</small>',
-            '  </div>',
-            '</div>'
-        ].join('');
+        info.innerHTML = '<div class="d-flex align-items-center">'
+            + '<i class="zmdi zmdi-file-text text-primary mr-2"></i>'
+            + '<div><strong>' + escapeHtml(file.name) + '</strong><br>'
+            + '<small class="text-muted">' + sizeKB + ' KB — PDF</small></div></div>';
         info.classList.remove('d-none');
     }
 
-    // ── Show encryption indicator ──
     if (status) {
-        status.innerHTML = [
-            '<div class="alert alert-info mt-2 mb-0">',
-            '  <i class="zmdi zmdi-shield-security"></i>',
-            '  <strong>El documento se cifrará antes del envío.</strong>',
-            '  <br><small>El contenido nunca sale del navegador sin cifrar.</small>',
-            '</div>'
-        ].join('');
+        status.innerHTML = '<div class="alert alert-info mt-2 mb-0">'
+            + '<i class="zmdi zmdi-shield-security"></i> '
+            + '<strong>El documento se cifrara antes del envio.</strong>'
+            + '<br><small>El contenido nunca sale del navegador sin cifrar.</small></div>';
         status.classList.remove('d-none');
     }
 
-    // ── Store file reference for submission ──
     window._selectedFile = file;
 
-    // ── Compute SHA-256 hash asynchronously ──
     if (typeof MARACrypto !== 'undefined') {
         MARACrypto.sha256(file).then(hash => {
             if (info) {
-                info.innerHTML += [
-                    '<br><small class="text-muted">SHA-256: ' +
-                    escapeHtml(hash.substring(0, 16)) +
-                    '…</small>'
-                ].join('');
+                info.innerHTML += '<br><small class="text-muted">SHA-256: '
+                    + escapeHtml(hash.substring(0, 16)) + '&hellip;</small>';
             }
             window._fileHash = hash;
-        }).catch(err => {
-            console.error('MARAChain: Error computing file hash:', err);
-        });
+        }).catch(err => console.error('MARAChain hash error:', err));
     }
 }
 
-/**
- * Display a file selection error message.
- *
- * @param {string} message The error message to show.
- *
- * @since 1.4.0
- */
 function showFileError(message) {
     const info = document.getElementById('file-info');
-    const fileUploadedInput = document.getElementById('file-uploaded');
-
-    if (fileUploadedInput) {
-        fileUploadedInput.value = '0';
-    }
-
     if (info) {
-        info.innerHTML = '<div class="text-danger"><i class="zmdi zmdi-alert-triangle"></i> ' +
-            escapeHtml(message) + '</div>';
+        info.innerHTML = '<div class="text-danger"><i class="zmdi zmdi-alert-triangle"></i> '
+            + escapeHtml(message) + '</div>';
         info.classList.remove('d-none');
     }
-
     window._selectedFile = null;
     window._fileHash = null;
 }
 
-/**
- * Escape HTML entities to prevent XSS in dynamic content.
- *
- * @param {string} str The string to escape.
- * @returns {string} Escaped string safe for innerHTML.
- *
- * @since 1.4.0
- */
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));

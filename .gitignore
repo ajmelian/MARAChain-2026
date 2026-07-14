@@ -1,0 +1,35 @@
+# ── OS files ──
+.DS_Store
+Thumbs.db
+
+# ── MARAChain internal tooling ──
+.opencode/*
+
+# ── Sensitive config ──
+*/.env
+*.local.*
+.env.*
+
+# ── Dependencies ──
+wwwroot/vendor/
+
+# ── Writable/generated ──
+wwwroot/writable/cache/*
+wwwroot/writable/debugbar/*
+wwwroot/writable/logs/*
+wwwroot/writable/session/*
+wwwroot/writable/uploads/*
+wwwroot/writable/db/*
+wwwroot/build/*
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Frontend templates (source only) ──
+resources/frontend/alpino/original/
+
+# ── Node (if added later) ──
+node_modules/

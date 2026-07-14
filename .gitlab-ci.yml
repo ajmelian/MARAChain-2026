@@ -1,0 +1,82 @@
+stages:
+  - test
+  - sast
+  - deploy-staging
+  - deploy-prod
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - wwwroot/vendor/
+    - wwwroot/.composer-cache/
+
+# ── PHPUnit Tests ────────────────────────────────────────────────
+test:phpunit:
+  stage: test
+  image: php:8.3-cli
+  before_script:
+    - apt update && apt install -y libzip-dev unzip git libsqlite3-dev
+    - docker-php-ext-install zip pdo pdo_sqlite
+    - curl -sS https://getcomposer.org/installer | php
+    - cd wwwroot && php ../composer.phar install --no-progress --no-interaction
+  script:
+    - cd wwwroot && vendor/bin/phpunit --colors=never --no-coverage
+  artifacts:
+    reports:
+      junit: wwwroot/build/logs/logfile.xml
+
+# ── Composer Security Audit ──────────────────────────────────────
+security:composer:
+  stage: test
+  image: php:8.3-cli
+  script:
+    - curl -sS https://getcomposer.org/installer | php
+    - cd wwwroot && php ../composer.phar audit --format=json > audit.json
+    - "! grep -q '\"critical\"\\|\"high\"' wwwroot/audit.json"
+  allow_failure: true
+
+# ── SAST – PHPStan Static Analysis ───────────────────────────────
+sast:phpstan:
+  stage: sast
+  image: php:8.3-cli
+  before_script:
+    - apt update && apt install -y libzip-dev unzip git
+    - docker-php-ext-install zip
+    - curl -sS https://getcomposer.org/installer | php
+    - cd wwwroot && php ../composer.phar install --no-progress --no-interaction
+  script:
+    - cd wwwroot && vendor/bin/phpstan analyse app/ --level=2 --no-progress
+  allow_failure: true
+
+# ── Deploy Staging ───────────────────────────────────────────────
+deploy:staging:
+  stage: deploy-staging
+  before_script:
+    - apt update && apt install -y openssh-client rsync
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H ${VPS_HOST} >> ~/.ssh/known_hosts
+  script:
+    - bash scripts/deploy-staging.sh
+  environment:
+    name: staging
+    url: https://staging.marachain.com
+  only:
+    - develop
+
+# ── Deploy Production ────────────────────────────────────────────
+deploy:production:
+  stage: deploy-prod
+  before_script:
+    - apt update && apt install -y openssh-client rsync
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H ${VPS_HOST} >> ~/.ssh/known_hosts
+  script:
+    - bash scripts/deploy-prod.sh
+  environment:
+    name: production
+    url: https://marachain.com
+  only:
+    - main
+  when: manual

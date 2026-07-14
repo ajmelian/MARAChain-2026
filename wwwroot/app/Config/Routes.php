@@ -1,0 +1,107 @@
+<?php
+
+use CodeIgniter\Router\RouteCollection;
+
+/** @var RouteCollection $routes */
+$routes->get('/', 'Home::index');
+
+// ── Health check (smoke test for deploy) ────────────────────────
+$routes->get('health', 'HealthController::index');
+
+// ═════════════════════════════════════════════════════════════════════
+//  AUTH ROUTES — Sin autenticacion (rate-limited)
+// ═════════════════════════════════════════════════════════════════════
+
+$routes->get('login', 'Web\AuthController::login', ['as' => 'login', 'filter' => 'throttle:auth']);
+$routes->post('login', 'Web\AuthController::login', ['filter' => 'throttle:auth']);
+$routes->get('register', 'Web\AuthController::register', ['as' => 'register', 'filter' => 'throttle:auth']);
+$routes->post('register', 'Web\AuthController::register', ['filter' => 'throttle:auth']);
+$routes->get('logout', 'Web\AuthController::logout', ['as' => 'logout']);
+
+// ═════════════════════════════════════════════════════════════════════
+//  WEB ROUTES — Vistas HTML (protegidas con SHIELD session auth)
+// ═════════════════════════════════════════════════════════════════════
+
+$routes->group('', ['filter' => 'session'], static function (RouteCollection $routes): void {
+    $routes->get('inbox', 'Web\TransfersController::inbox');
+    $routes->get('outbox', 'Web\TransfersController::outbox');
+    $routes->get('transfers/new', 'Web\TransfersController::new');
+
+    $routes->get('profile', 'Web\ProfileController::index');
+
+    // ── Contacts (web HTML views) ──────────────────────────────────
+    $routes->get('web/contacts', 'Web\ContactsController::index');
+    $routes->post('web/contacts', 'Web\ContactsController::store');
+    $routes->get('web/contacts/(:segment)', 'Web\ContactsController::edit/$1');
+    $routes->put('web/contacts/(:segment)', 'Web\ContactsController::update/$1');
+    $routes->delete('web/contacts/(:segment)', 'Web\ContactsController::delete/$1');
+});
+
+// ═════════════════════════════════════════════════════════════════════
+//  API ROUTES — JSON (controladores REST)
+// ═════════════════════════════════════════════════════════════════════
+
+// ── Evidence Routes ────────────────────────────────────────────
+$routes->get('evidence', 'EvidenceController::index');
+$routes->get('evidence/(:segment)', 'EvidenceController::show/$1');
+
+// ── Ledger Routes ──────────────────────────────────────────────
+$routes->get('ledger', 'LedgerController::index');
+$routes->get('ledger/verify', 'LedgerController::verify');
+$routes->get('ledger/(:segment)', 'LedgerController::show/$1');
+
+// ── Contact Routes ─────────────────────────────────────────────
+$routes->get('contacts', 'ContactController::index');
+$routes->post('contacts', 'ContactController::create');
+$routes->get('contacts/(:segment)', 'ContactController::show/$1');
+$routes->put('contacts/(:segment)', 'ContactController::update/$1');
+$routes->delete('contacts/(:segment)', 'ContactController::delete/$1');
+
+// ── Notification Routes ────────────────────────────────────────
+$routes->get('notifications', 'NotificationController::index');
+$routes->get('notifications/(:segment)', 'NotificationController::show/$1');
+
+service('auth')->routes($routes, ['except' => ['login', 'register', 'logout']]);
+
+// ── Users Routes ───────────────────────────────────────────────
+$routes->group('users', static function (RouteCollection $routes): void {
+    $routes->get('/',               'UserController::index');
+    $routes->get('(:segment)',      'UserController::show/$1');
+    $routes->post('/',              'UserController::create');
+    $routes->put('(:segment)',      'UserController::update/$1');
+    $routes->delete('(:segment)',   'UserController::delete/$1');
+    $routes->post('(:segment)/totp', 'UserController::enableTotp/$1');
+});
+
+// ── Devices Routes ─────────────────────────────────────────────
+$routes->group('devices', static function (RouteCollection $routes): void {
+    $routes->get('/',               'DeviceController::index');
+    $routes->get('(:segment)',      'DeviceController::show/$1');
+    $routes->post('/',              'DeviceController::register');
+    $routes->delete('(:segment)',   'DeviceController::revoke/$1');
+});
+
+// ── Documents Routes ───────────────────────────────────────────
+$routes->group('documents', static function (RouteCollection $routes): void {
+    $routes->get('/',                'DocumentController::index');
+    $routes->get('(:segment)',       'DocumentController::show/$1');
+    $routes->post('/',               'DocumentController::create');
+    $routes->post('(:segment)/seal', 'DocumentController::seal/$1');
+    $routes->delete('(:segment)',    'DocumentController::delete/$1');
+});
+
+// ── Transfers Routes ───────────────────────────────────────────
+$routes->group('transfers', static function (RouteCollection $routes): void {
+    $routes->get('/',                   'TransferController::index');
+    $routes->get('sent',                'TransferController::outbox');
+    $routes->get('received',            'TransferController::inbox');
+    $routes->get('(:segment)',          'TransferController::show/$1');
+    $routes->post('/',                  'TransferController::create');
+    $routes->post('(:segment)/revoke',  'TransferController::revoke/$1');
+});
+
+// ── Signatures Routes ──────────────────────────────────────────
+$routes->group('signatures', static function (RouteCollection $routes): void {
+    $routes->get('(:segment)',     'SignatureController::show/$1');
+    $routes->post('/',             'SignatureController::request');
+});

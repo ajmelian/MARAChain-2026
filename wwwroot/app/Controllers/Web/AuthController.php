@@ -189,7 +189,7 @@ class AuthController extends BaseWebController
         // ── Step 3: Create custom MARAChain user profile ─────────
         $customUserModel = model(\App\Models\UserModel::class);
         try {
-            $customUserId = $this->uuidV4();
+            $customUserId = \App\Helpers\Uuid::v4();
             $customUserModel->create([
                 'id'             => $customUserId,
                 'shieldUserId'   => $shieldUser->id,
@@ -308,7 +308,7 @@ class AuthController extends BaseWebController
     {
         try {
             $this->evidenceModel->createEvidence([
-                'eventId'            => $this->uuidV4(),
+                'eventId'            => \App\Helpers\Uuid::v4(),
                 'eventType'          => $eventType,
                 'occurredAt'         => date('Y-m-d H:i:s'),
                 'aggregateType'      => 'User',
@@ -353,12 +353,4 @@ class AuthController extends BaseWebController
     /**
      * Generate UUID v4.
      */
-    private function uuidV4(): string
-    {
-        $data = random_bytes(16);
-        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
-        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
-
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-    }
 }

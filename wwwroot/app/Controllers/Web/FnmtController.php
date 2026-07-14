@@ -100,7 +100,7 @@ class FnmtController extends BaseWebController
 
         if ($customUser === null) {
             // ── New user: create custom profile ──────────────────
-            $userId = $this->uuidV4();
+            $userId = \App\Helpers\Uuid::v4();
 
             $this->userModel->create([
                 'id'             => $userId,
@@ -554,7 +554,7 @@ class FnmtController extends BaseWebController
     {
         try {
             $this->evidenceModel->createEvidence([
-                'eventId'            => $this->uuidV4(),
+                'eventId'            => \App\Helpers\Uuid::v4(),
                 'eventType'          => $eventType,
                 'occurredAt'         => date('Y-m-d H:i:s'),
                 'aggregateType'      => 'User',
@@ -575,12 +575,4 @@ class FnmtController extends BaseWebController
         }
     }
 
-    private function uuidV4(): string
-    {
-        $data = random_bytes(16);
-        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
-        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
-
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-    }
 }

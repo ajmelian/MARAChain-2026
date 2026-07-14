@@ -55,7 +55,7 @@ class SecurityHeaders implements FilterInterface
         'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
 
         // https://owasp.org/www-project-secure-headers/#content-security-policy
-        'Content-Security-Policy' => "default-src 'self'",
+        'Content-Security-Policy' => "default-src 'self'; img-src 'self' data: https://api.qrserver.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
 
         // https://owasp.org/www-project-secure-headers/#permissions-policy
         'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()',

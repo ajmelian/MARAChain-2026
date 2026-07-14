@@ -74,7 +74,7 @@ class SignatureRequestModel extends Model
             );
         }
 
-        $id = $this->generateUuidV4();
+        $id = \App\Helpers\Uuid::v4();
 
         $row = [
             'id'                   => $id,
@@ -277,20 +277,4 @@ class SignatureRequestModel extends Model
         return array_map(static fn (array $row): SignatureRequest => new SignatureRequest($row), $rows);
     }
 
-    /**
-     * Generate a UUID v4 compatible with RFC 4122.
-     *
-     * @return string UUID v4 in canonical 8-4-4-4-12 format
-     *
-     * @since 1.1.1
-     */
-    private function generateUuidV4(): string
-    {
-        $data = random_bytes(16);
-
-        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
-        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
-
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-    }
 }

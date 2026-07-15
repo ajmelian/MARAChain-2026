@@ -102,7 +102,7 @@ class Throttle implements FilterInterface
     {
         $ip = $request->getIPAddress();
 
-        return sha1(($ip ?? '127.0.0.1') . '|' . $request->getPath());
+        return hash('sha256', ($ip ?? '127.0.0.1') . '|' . $request->getPath());
     }
 
     /**

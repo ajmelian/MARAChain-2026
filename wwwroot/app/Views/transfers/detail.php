@@ -20,7 +20,7 @@
     <div class="col-lg-8 col-md-12">
         <div class="card">
             <div class="header">
-                <h2>Transferencia <?= esc($transfer['id']) ?></h2>
+                <h2>Transferencia <?= esc($transfer->id ?? $transfer['id']) ?></h2>
             </div>
             <div class="body">
                 <div class="table-responsive">
@@ -28,7 +28,7 @@
                         <tbody>
                             <tr>
                                 <th style="width: 200px;">ID</th>
-                                <td><code><?= esc($transfer['id']) ?></code></td>
+                                <td><code><?= esc($transfer->id ?? $transfer['id']) ?></code></td>
                             </tr>
                             <tr>
                                 <th>Estado</th>
@@ -38,19 +38,19 @@
                             </tr>
                             <tr>
                                 <th>Remitente</th>
-                                <td><?= esc($transfer['senderId']) ?></td>
+                                <td><?= esc($transfer->senderId ?? $transfer['senderId']) ?></td>
                             </tr>
                             <tr>
                                 <th>Destinatario</th>
-                                <td><?= esc($transfer['recipientId']) ?></td>
+                                <td><?= esc($transfer->recipientId ?? $transfer['recipientId']) ?></td>
                             </tr>
                             <tr>
                                 <th>Documento</th>
-                                <td><?= esc($transfer['documentId']) ?></td>
+                                <td><?= esc($transfer->documentId ?? $transfer['documentId']) ?></td>
                             </tr>
                             <tr>
                                 <th>Fecha de creacion</th>
-                                <td><?= esc($transfer['createdAt']) ?></td>
+                                <td><?= esc(is_string($transfer->createdAt ?? null) ? $transfer->createdAt : ($transfer['createdAt'] ?? '')) ?></td>
                             </tr>
                         </tbody>
                     </table>

@@ -300,6 +300,9 @@ class FnmtController extends BaseWebController
         // ── Create SHIELD session for the user ───────────────────
         $this->createShieldSessionForUser($user);
 
+        // ── Queue email notification (CU-AUTH-002 step 12) ────────
+        $this->queueNotification($user, 'auth_success', 'Inicio de sesion en MARAChain');
+
         return redirect()->to('/inbox')
             ->with('message', 'Autenticacion completada.');
     }
@@ -581,4 +584,43 @@ class FnmtController extends BaseWebController
         }
     }
 
+    /**
+     * Queue an email notification via the transactional outbox.
+     *
+     * @param object $user  Custom User entity
+     * @param string $type  Notification type (e.g. auth_success)
+     * @param string $subject Email subject
+     *
+     * @since 1.5.0
+     */
+    private function queueNotification($user, string $type, string $subject): void
+    {
+        try {
+            $email = $user->email ?? null;
+            if ($email === null || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return;
+            }
+
+            $db    = db_connect();
+            $id    = \App\Helpers\Uuid::v4();
+            $now   = date('Y-m-d H:i:s');
+            $body  = "Se ha iniciado sesion en su cuenta de MARAChain.\n\n"
+                   . "Fecha: {$now}\n"
+                   . "Si no ha sido usted, contacte con soporte inmediatamente.";
+
+            $db->table('notification_requested')->insert([
+                'id'                => $id,
+                'channel'           => 'email',
+                'recipient_address' => $email,
+                'subject'           => $subject,
+                'body_text'         => $body,
+                'status'            => 'QUEUED',
+                'idempotency_key'   => hash('sha256', 'fnmt_login_' . $id),
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to queue FNMT notification: ' . $e->getMessage());
+        }
+    }
 }

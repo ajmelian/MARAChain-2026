@@ -158,36 +158,14 @@ class TransfersController extends BaseWebController
      */
     public function detail(string $id): string
     {
-        // Buscar en mock data para MVP
-        $mockData = [
-            '880e8400-e29b-41d4-a716-446655440003' => [
-                'id'          => '880e8400-e29b-41d4-a716-446655440003',
-                'senderId'    => '550e8400-e29b-41d4-a716-446655440000',
-                'recipientId' => '00000000-0000-4000-a000-000000000001',
-                'documentId'  => '770e8400-e29b-41d4-a716-446655440002',
-                'status'      => 'AVAILABLE',
-                'createdAt'   => '2026-07-13 09:00:00',
-            ],
-            '881e8400-e29b-41d4-a716-446655440004' => [
-                'id'          => '881e8400-e29b-41d4-a716-446655440004',
-                'senderId'    => '00000000-0000-4000-a000-000000000001',
-                'recipientId' => '660e8400-e29b-41d4-a716-446655440005',
-                'documentId'  => '771e8400-e29b-41d4-a716-446655440006',
-                'status'      => 'SENT',
-                'createdAt'   => '2026-07-12 15:30:00',
-            ],
-        ];
+        $transfer = $this->transferModel->freshEntity($id);
 
-        $data = $mockData[$id] ?? null;
-
-        if ($data === null) {
+        if ($transfer === null) {
             return $this->render('transfers/not_found', [
                 'title'   => 'Transferencia no encontrada',
                 'current' => 'inbox',
             ]);
         }
-
-        $transfer = new DocumentTransfer($data);
 
         $statusLabels = [
             'PENDING_RECIPIENT' => 'Pendiente',
@@ -221,7 +199,7 @@ class TransfersController extends BaseWebController
         return $this->render('transfers/detail', [
             'title'       => 'Transferencia ' . esc($id),
             'current'     => 'inbox',
-            'transfer'    => $data,
+            'transfer'    => $transfer,
             'statusLabel' => $statusLabel,
             'badgeClass'  => $badgeClass,
         ]);

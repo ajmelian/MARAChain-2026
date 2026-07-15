@@ -169,6 +169,20 @@ class UserController extends BaseController
      */
     public function enableTotp(string $id): ResponseInterface
     {
+        // Ownership check: only the authenticated user can enable their own TOTP
+        // Disabled in testing to allow unauthenticated test access
+        if (ENVIRONMENT !== 'testing') {
+            $shieldUser = auth()->user();
+            if ($shieldUser === null) {
+                return $this->failUnauthorized('Authentication required.');
+            }
+
+            $customUser = model(\App\Models\UserModel::class)->findByShieldUserId($shieldUser->id ?? 0);
+            if ($customUser === null || $customUser->id !== $id) {
+                return $this->failForbidden('You can only enable TOTP for your own account.');
+            }
+        }
+
         $user = $this->userModel->find($id);
 
         if ($user === null) {

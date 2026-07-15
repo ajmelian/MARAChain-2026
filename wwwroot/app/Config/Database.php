@@ -33,7 +33,7 @@ class Database extends Config
         'DBDriver'     => 'SQLite3',
         'DBPrefix'     => 'db_',
         'pConnect'     => false,
-        'DBDebug'      => true,
+        'DBDebug'      => (ENVIRONMENT !== 'production'),
         'charset'      => 'utf8',
         'DBCollat'     => 'utf8_general_ci',
         'swapPre'      => '',

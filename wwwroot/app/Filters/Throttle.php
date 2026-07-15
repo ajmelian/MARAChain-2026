@@ -57,6 +57,10 @@ class Throttle implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null): RequestInterface|ResponseInterface|null
     {
+        if (ENVIRONMENT === 'testing') {
+            return null;
+        }
+
         $key = $arguments[0] ?? 'api';
 
         if (isset(self::LIMITS[$key])) {

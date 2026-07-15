@@ -38,6 +38,9 @@ class FnmtController extends BaseWebController
 
     private UserModel $userModel;
 
+    /** @var string Date-time format for timestamps */
+    private const DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     public function __construct()
     {
         $this->x509           = new X509Service();
@@ -134,7 +137,7 @@ class FnmtController extends BaseWebController
         // ── Existing user ────────────────────────────────────────
         $customUserModel = $this->userModel;
         $customUserModel->update($customUser->id, [
-            'last_login_at' => date('Y-m-d H:i:s'),
+            'last_login_at' => date(self::DATETIME_FORMAT),
         ]);
 
         $this->recordEvidence('FnmtLoginSuccess', [
@@ -301,7 +304,7 @@ class FnmtController extends BaseWebController
         $this->createShieldSessionForUser($user);
 
         // ── Queue email notification (CU-AUTH-002 step 12) ────────
-        $this->queueNotification($user, 'auth_success', 'Inicio de sesion en MARAChain');
+        $this->queueNotification($user, 'Inicio de sesion en MARAChain');
 
         return redirect()->to('/inbox')
             ->with('message', 'Autenticacion completada.');
@@ -333,29 +336,24 @@ class FnmtController extends BaseWebController
      */
     private function verifyTotp(string $secret, string $code): bool
     {
-        if (empty($secret) || strlen($code) !== 6) {
-            return false;
-        }
-
-        // Prevent TOTP code reuse within the valid window
         $usedCodes = session('totp_used_codes') ?? [];
-        $windowKey = floor(time() / 30);
-        if (in_array($code . ':' . $windowKey, $usedCodes, true)) {
+        $windowKey = (int) floor(time() / 30);
+
+        // Guard: empty secret, invalid length, or code reuse within the same window
+        if (empty($secret) || strlen($code) !== 6 || in_array($code . ':' . $windowKey, $usedCodes, true)) {
             return false;
         }
 
-        $base32 = $this->base32Decode($secret);
-        $timeSlice = floor(time() / 30);
+        $base32   = $this->base32Decode($secret);
+        $timeSlice = (int) floor(time() / 30);
 
         for ($i = -1; $i <= 1; $i++) {
             $expected = $this->computeTotp($base32, $timeSlice + $i);
 
             if (hash_equals($expected, $code)) {
-                // Mark code as used for the current window
+                // Mark code as used for the current window — keep last 10 entries
                 $usedCodes[] = $code . ':' . $windowKey;
-                // Keep only last 10 entries to prevent session bloat
-                $usedCodes = array_slice($usedCodes, -10);
-                session()->set('totp_used_codes', $usedCodes);
+                session()->set('totp_used_codes', array_slice($usedCodes, -10));
 
                 return true;
             }
@@ -578,7 +576,7 @@ class FnmtController extends BaseWebController
             $this->evidenceModel->createEvidence([
                 'eventId'            => \App\Helpers\Uuid::v4(),
                 'eventType'          => $eventType,
-                'occurredAt'         => date('Y-m-d H:i:s'),
+                'occurredAt'         => date(self::DATETIME_FORMAT),
                 'aggregateType'      => 'User',
                 'aggregateId'        => $payload['userId'] ?? '',
                 'actorType'          => 'system',
@@ -600,13 +598,12 @@ class FnmtController extends BaseWebController
     /**
      * Queue an email notification via the transactional outbox.
      *
-     * @param object $user  Custom User entity
-     * @param string $type  Notification type (e.g. auth_success)
+     * @param object $user    Custom User entity
      * @param string $subject Email subject
      *
      * @since 1.5.0
      */
-    private function queueNotification($user, string $type, string $subject): void
+    private function queueNotification($user, string $subject): void
     {
         try {
             $email = $user->email ?? null;
@@ -616,7 +613,7 @@ class FnmtController extends BaseWebController
 
             $db    = db_connect();
             $id    = \App\Helpers\Uuid::v4();
-            $now   = date('Y-m-d H:i:s');
+            $now   = date(self::DATETIME_FORMAT);
             $body  = "Se ha iniciado sesion en su cuenta de MARAChain.\n\n"
                    . "Fecha: {$now}\n"
                    . "Si no ha sido usted, contacte con soporte inmediatamente.";

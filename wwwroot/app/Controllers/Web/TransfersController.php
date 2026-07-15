@@ -22,6 +22,9 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class TransfersController extends BaseWebController
 {
+    /** @var string Inbox route path */
+    private const INBOX_ROUTE = '/inbox';
+
     private DocumentTransferModel $transferModel;
 
     /**
@@ -219,16 +222,16 @@ class TransfersController extends BaseWebController
         $transfer = $this->transferModel->freshEntity($id);
 
         if ($transfer === null) {
-            return redirect()->to('/inbox')->with('error', 'Transferencia no encontrada.');
+            return redirect()->to(self::INBOX_ROUTE)->with('error', 'Transferencia no encontrada.');
         }
 
         try {
             $this->transferModel->transitionStatus($transfer, 'ACCEPTED');
         } catch (\Throwable $e) {
-            return redirect()->to('/inbox')->with('error', $e->getMessage());
+            return redirect()->to(self::INBOX_ROUTE)->with('error', $e->getMessage());
         }
 
-        return redirect()->to('/inbox')->with('message', 'Transferencia aceptada.');
+        return redirect()->to(self::INBOX_ROUTE)->with('message', 'Transferencia aceptada.');
     }
 
     /**
@@ -245,15 +248,15 @@ class TransfersController extends BaseWebController
         $transfer = $this->transferModel->freshEntity($id);
 
         if ($transfer === null) {
-            return redirect()->to('/inbox')->with('error', 'Transferencia no encontrada.');
+            return redirect()->to(self::INBOX_ROUTE)->with('error', 'Transferencia no encontrada.');
         }
 
         try {
             $this->transferModel->transitionStatus($transfer, 'REJECTED');
         } catch (\Throwable $e) {
-            return redirect()->to('/inbox')->with('error', $e->getMessage());
+            return redirect()->to(self::INBOX_ROUTE)->with('error', $e->getMessage());
         }
 
-        return redirect()->to('/inbox')->with('message', 'Transferencia rechazada.');
+        return redirect()->to(self::INBOX_ROUTE)->with('message', 'Transferencia rechazada.');
     }
 }

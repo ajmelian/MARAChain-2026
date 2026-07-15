@@ -169,18 +169,9 @@ class UserController extends BaseController
      */
     public function enableTotp(string $id): ResponseInterface
     {
-        // Ownership check: only the authenticated user can enable their own TOTP
-        // Disabled in testing to allow unauthenticated test access
-        if (ENVIRONMENT !== 'testing') {
-            $shieldUser = auth()->user();
-            if ($shieldUser === null) {
-                return $this->failUnauthorized('Authentication required.');
-            }
-
-            $customUser = model(\App\Models\UserModel::class)->findByShieldUserId($shieldUser->id ?? 0);
-            if ($customUser === null || $customUser->id !== $id) {
-                return $this->failForbidden('You can only enable TOTP for your own account.');
-            }
+        $ownershipCheck = $this->checkTotpOwnership($id);
+        if ($ownershipCheck !== null) {
+            return $ownershipCheck;
         }
 
         $user = $this->userModel->find($id);
@@ -195,5 +186,36 @@ class UserController extends BaseController
         $user = $this->userModel->enableTotp($user, $secret);
 
         return $this->respond($user);
+    }
+
+    /**
+     * Check that the authenticated user owns the TOTP being enabled.
+     *
+     * Disabled in testing to allow unauthenticated test access.
+     *
+     * @param string $id Target user UUID
+     *
+     * @return ResponseInterface|null Error response or null if check passes
+     *
+     * @since 1.1.1
+     */
+    private function checkTotpOwnership(string $id): ?ResponseInterface
+    {
+        if (ENVIRONMENT === 'testing') {
+            return null;
+        }
+
+        $shieldUser = auth()->user();
+        if ($shieldUser === null) {
+            return $this->failUnauthorized('Authentication required.');
+        }
+
+        /** @var \App\Models\UserModel $userModel */
+        $customUser = model(\App\Models\UserModel::class)->findByShieldUserId($shieldUser->id ?? 0);
+        if ($customUser === null || $customUser->id !== $id) {
+            return $this->failForbidden('You can only enable TOTP for your own account.');
+        }
+
+        return null;
     }
 }

@@ -55,7 +55,7 @@ class StorageService
         $fileHashSha256 = $metadata['fileHashSha256'] ?? '';
 
         if ($manifestHash !== $fileHashSha256) {
-            throw new RuntimeException(
+            throw new \InvalidArgumentException(
                 'Manifest hash mismatch — document integrity check failed. '
                 . 'Expected: ' . substr($fileHashSha256, 0, 16)
                 . '..., Got: ' . substr($manifestHash, 0, 16) . '...'

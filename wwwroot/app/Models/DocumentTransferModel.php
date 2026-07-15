@@ -69,15 +69,15 @@ class DocumentTransferModel extends Model
     public function create(array $data): DocumentTransfer
     {
         if (empty($data['idempotencyKey'] ?? '')) {
-            throw new \RuntimeException('Idempotency key is required.');
+            throw new \InvalidArgumentException('Idempotency key is required.');
         }
 
         if (empty($data['documentId'] ?? '')) {
-            throw new \RuntimeException('Document ID is required.');
+            throw new \InvalidArgumentException('Document ID is required.');
         }
 
         if (empty($data['recipientId'] ?? '')) {
-            throw new \RuntimeException('Recipient ID is required.');
+            throw new \InvalidArgumentException('Recipient ID is required.');
         }
 
         $id = \App\Helpers\Uuid::v4();

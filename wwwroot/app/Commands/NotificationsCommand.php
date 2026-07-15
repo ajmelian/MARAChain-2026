@@ -33,6 +33,9 @@ class NotificationsCommand extends BaseCommand
     protected $name        = 'notifications:send';
     protected $description = 'Procesa el outbox de notificaciones y las envia por los canales configurados.';
 
+    /** @var string Date-time format for timestamps */
+    private const DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     private array $providers = [];
 
     public function __construct()
@@ -52,7 +55,7 @@ class NotificationsCommand extends BaseCommand
 
         $rows = $db->table('notification_requested')
             ->whereIn('status', ['QUEUED', 'RETRYING'])
-            ->where('scheduled_at <=', date('Y-m-d H:i:s'))
+            ->where('scheduled_at <=', date(self::DATETIME_FORMAT))
             ->orWhere('scheduled_at', null)
             ->orderBy('priority', 'DESC')
             ->orderBy('created_at', 'ASC')
@@ -104,18 +107,18 @@ class NotificationsCommand extends BaseCommand
                         ->where('id', $row['id'])
                         ->update([
                             'status'              => 'SENT',
-                            'sent_at'             => date('Y-m-d H:i:s'),
+                            'sent_at'             => date(self::DATETIME_FORMAT),
                             'provider_message_id' => $result->providerMessageId,
-                            'updated_at'          => date('Y-m-d H:i:s'),
+                            'updated_at'          => date(self::DATETIME_FORMAT),
                         ]);
                     CLI::write('  Sent OK ✓', 'green');
                     $sent++;
                 } else {
-                    $this->handleFailure($db, $table, $row, $result->errorCode ?? 'UNKNOWN', $result->errorMessage ?? 'Error desconocido.');
+                    $this->handleFailure($db, $row, $result->errorCode ?? 'UNKNOWN', $result->errorMessage ?? 'Error desconocido.');
                     $failed++;
                 }
             } catch (\Throwable $e) {
-                $this->handleFailure($db, $table, $row, 'EXCEPTION', $e->getMessage());
+                $this->handleFailure($db, $row, 'EXCEPTION', $e->getMessage());
                 $failed++;
             }
         }
@@ -123,7 +126,7 @@ class NotificationsCommand extends BaseCommand
         CLI::write(sprintf('Done. Sent: %d, Failed: %d', $sent, $failed), $sent > 0 ? 'green' : 'yellow');
     }
 
-    private function handleFailure($db, string $table, array $row, string $errorCode, string $errorMessage): void
+    private function handleFailure($db, array $row, string $errorCode, string $errorMessage): void
     {
         $newCount    = (int) $row['attempt_count'] + 1;
         $maxAttempts = (int) $row['max_attempts'];
@@ -136,8 +139,8 @@ class NotificationsCommand extends BaseCommand
                 'attempt_count'   => $newCount,
                 'error_code'      => $errorCode,
                 'error_message'   => $errorMessage,
-                'last_attempt_at' => date('Y-m-d H:i:s'),
-                'updated_at'      => date('Y-m-d H:i:s'),
+                'last_attempt_at' => date(self::DATETIME_FORMAT),
+                'updated_at'      => date(self::DATETIME_FORMAT),
             ]);
 
         CLI::write("  Failed ✗ — {$errorCode}: {$errorMessage}" . ($newStatus === 'DEAD_LETTER' ? ' [DEAD_LETTER]' : ''), 'red');
@@ -149,8 +152,8 @@ class NotificationsCommand extends BaseCommand
             ->where('id', $id)
             ->update([
                 'status'          => $status,
-                'last_attempt_at' => date('Y-m-d H:i:s'),
-                'updated_at'      => date('Y-m-d H:i:s'),
+                'last_attempt_at' => date(self::DATETIME_FORMAT),
+                'updated_at'      => date(self::DATETIME_FORMAT),
             ]);
     }
 
@@ -162,7 +165,7 @@ class NotificationsCommand extends BaseCommand
                 'status'        => $status,
                 'error_code'    => $errorCode,
                 'error_message' => $errorMessage,
-                'updated_at'    => date('Y-m-d H:i:s'),
+                'updated_at'    => date(self::DATETIME_FORMAT),
             ]);
     }
 }

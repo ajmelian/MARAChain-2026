@@ -162,7 +162,7 @@ final class DocumentTransferModelTest extends CIUnitTestCase
      */
     public function testCreateTransferWithoutIdempotencyKey(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $this->model->create([
             'documentId'    => $this->document->id,

@@ -2,20 +2,20 @@
 
 **Última actualización**: 2026-07-14  
 **Versión actual del código**: v1.5.0-alpha  
-**Compliance Score**: 42/100
+**Compliance Score**: 52/100 (+10 desde última auditoría)
 
 ---
 
 ## P0 — Bloqueantes (debe resolverse antes de cualquier despliegue)
 
-| # | Área | Descripción | Archivo | Esfuerzo |
-|---|------|-------------|---------|:--------:|
-| P0-1 | 🔐 SECURITY | `encryption.hmacKey` vacío en `.env`. Rompe autenticación FNMT completa (CU-AUTH-001/002). El `FnmtController` lanza RuntimeException si la clave no está configurada. | `.env:23` | S |
-| P0-2 | 🔐 SECURITY | `encryption.key` no configurado en `.env`. Sin esta clave, `encryptTotpSecret()` lanza RuntimeException, rompiendo el enrolamiento TOTP. | `.env` | S |
-| P0-3 | 🔒 ENCRYPTION | **Hash mismatch**: el frontend envía `fileHash` (SHA-256 del archivo) como `manifestHash`. El backend recalcula `hash('sha256', json_encode($metadata))`. Los hashes nunca coinciden. **El upload de documentos está roto**. | `dropzone-init.js:85` vs `StorageService.php:55-57` | M |
-| P0-4 | 🔒 ENCRYPTION | **DEK perdida**: `encryptDocument()` genera y exporta la DEK (`dekHex`) pero nunca se envía al servidor ni se encapsula por destinatario. El envelope `recipients: []` se envía vacío. El documento cifrado es **irrecuperable**. Ningún destinatario puede descifrar. | `marachain-crypto.js:125-140` | L |
-| P0-5 | 🔐 SECURITY | **Rutas API sin autenticación**: `/users`, `/documents`, `/transfers`, `/contacts`, `/evidence`, `/ledger`, `/devices`, `/signatures`, `/notifications` — todas accesibles sin sesión. Cualquiera puede crear/leer/borrar datos. | `app/Config/Routes.php:54-119` | M |
-| P0-6 | 🔐 SECURITY | **Credenciales en texto plano** en `.env`: MySQL password, SMTP user/password visibles en el filesystem del servidor. | `.env` | S |
+| # | Área | Descripción | Archivo | Esfuerzo | Estado |
+|---|------|-------------|---------|:--------:|:------:|
+| P0-1 | 🔐 SECURITY | ~~`encryption.hmacKey` vacío en `.env`~~ | `.env:23` | S | ✅ Resuelto |
+| P0-2 | 🔐 SECURITY | ~~`encryption.key` no configurado en `.env`~~ | `.env` | S | ✅ Resuelto |
+| P0-3 | 🔒 ENCRYPTION | ~~Hash mismatch en upload pipeline~~ | `dropzone-init.js:85` vs `StorageService.php` | M | ✅ Resuelto |
+| P0-4 | 🔒 ENCRYPTION | ~~DEK perdida — nunca se enviaba al servidor~~ | `marachain-crypto.js:125-140` | L | ✅ Resuelto |
+| P0-5 | 🔐 SECURITY | ~~Rutas API sin autenticación~~ | `app/Config/Routes.php:54-119` | M | ✅ Resuelto |
+| P0-6 | 🔐 SECURITY | **Credenciales en texto plano** en `.env`: MySQL password, SMTP user/password visibles en el filesystem del servidor. | `.env` | S | ⚠️ Parcial (gitignored, no accesible via web, pero visible en filesystem) |
 
 ---
 
@@ -28,7 +28,7 @@
 | P1-3 | 🔑 AUTH | Configuración de sesión SHIELD no coincide con el spec: timeout 2h en lugar de 8h/30min inactividad/reauth a los 5min para operaciones críticas. Sin límite de sesiones activas (spec: 5). | `app/Config/Auth.php` | M |
 | P1-4 | 📄 DOCUMENTS | `TransfersController::detail()` usa datos mock hardcodeados. Una transferencia real creada vía API nunca se muestra en la vista web de detalle. | `TransfersController.php:162-179` | S |
 | P1-5 | 📄 DOCUMENTS | No hay vista web para aceptar/rechazar transferencias. Las rutas API `POST /transfers/{id}/accept` y `reject` existen, pero el usuario no puede ejecutarlas desde la UI. | Vistas + controlador web | M |
-| P1-6 | 🔒 ENCRYPTION | No existe función `decryptDocument()` en el cliente JS. El pipeline documental es one-way: se cifra pero nunca se lee. CU-ACCESS-002 requiere desencapsular DEK, verificar integridad y descifrar. | `marachain-crypto.js` | L |
+| P1-6 | 🔒 ENCRYPTION | ~~No existe función `decryptDocument()` en el cliente JS~~ | `marachain-crypto.js` | L | ✅ Resuelto |
 | P1-7 | 📬 NOTIFICATIONS | Outbox **no es transaccional**: el worker lee de `notification_requested` directamente. La inserción de la notificación no es atómica con la operación de negocio (creación de transferencia). Falta `NotificationRequestedModel`. | `TransferController::create()` + `NotificationsCommand.php` | L |
 | P1-8 | 🖥️ INFRA | **IPFS worker no implementado**. `StorageService` almacena ciphertext en MySQL, no en IPFS. El spec exige IPFS privado con 3 nodos y reconciliación. | Nuevo `Commands/IpfsReconcile.php` | XL |
 | P1-9 | 🔐 SECURITY | `DBDebug = true` — en producción expone errores de BD con queries SQL al frontend. | `app/Config/Database.php:36` | S |
@@ -78,40 +78,46 @@
 
 | Área | Estado | P0 | P1 | P2 | P3 |
 |------|:------:|:--:|:--:|:--:|:--:|
-| **AUTH** | ⚠️ Parcial | 1 | 3 | 1 | 1 |
+| **AUTH** | ⚠️ Parcial | 0 | 3 | 1 | 1 |
 | **DOCUMENTS** | ⚠️ Parcial | — | 2 | — | 1 |
-| **ENCRYPTION** | 🔴 Roto | 2 | 1 | — | — |
+| **ENCRYPTION** | ✅ Corregido | 0 | 0 | — | — |
 | **LEDGER** | ✅ Funcional | — | — | 3 | — |
 | **NOTIFICATIONS** | ⚠️ Parcial | — | 1 | 1 | 1 |
 | **FRONTEND** | ⚠️ Parcial | — | — | — | 3 |
 | **INFRA** | 🔴 Incompleto | — | 1 | 4 | 1 |
 | **TESTING** | ⚠️ Básico | — | — | 4 | — |
-| **SECURITY** | 🔴 Crítico | 3 | 2 | 3 | — |
+| **SECURITY** | ⚠️ Mejorado | 1 | 2 | 3 | — |
 
-| Prioridad | Count | Esfuerzo estimado |
-|-----------|:-----:|-------------------|
-| **P0** — Bloqueante | 6 | ~3 semanas |
-| **P1** — Crítico | 10 | ~4 semanas |
-| **P2** — Importante | 16 | ~6 semanas |
-| **P3** — Mejora | 8 | ~3 semanas |
-| **Total** | **40** | **~16 semanas** |
+| Prioridad | Count | Resueltos | Pendientes |
+|-----------|:-----:|:---------:|:----------:|
+| **P0** — Bloqueante | 6 | 5 | 1 |
+| **P1** — Crítico | 10 | 1 | 9 |
+| **P2** — Importante | 16 | 0 | 16 |
+| **P3** — Mejora | 8 | 0 | 8 |
+| **Total** | **40** | **6** | **34** |
 
 ---
 
 ## Orden de ejecución recomendado
 
 ```
-Semana 1-2:   P0-1, P0-2, P0-5, P0-6, P0-9 (security + config)
-Semana 3:     P0-3, P0-4 (fix encryption pipeline)
-Semana 4-5:   P1-1, P1-2, P1-3, P1-10 (auth hardening)
-Semana 6-7:   P1-4, P1-5, P1-6 (document transfer complete flow)
-Semana 8-9:   P1-7, P2-7, P2-8 (notifications transactional + SMTP)
-Semana 10-11: P2-1, P2-2, P2-3, P2-4 (security headers + auth routes)
-Semana 12-13: P2-5, P2-6 (Ed25519 signatures + Merkle proofs)
-Semana 14:    P2-9, P2-10, P2-15, P2-16 (CI/CD + workers)
-Semana 15-16: P2-11, P2-12, P2-13, P2-14 (testing coverage)
-Backlog:      P3-1 a P3-8
+✅ Semana 1-2:   P0-1, P0-2, P0-5 (security + config)
+✅ Semana 3:     P0-3, P0-4, P1-6 (fix encryption pipeline + decrypt)
+   Semana 4-5:   P1-1, P1-2, P1-3, P1-10 (auth hardening)
+   Semana 6-7:   P1-4, P1-5 (document transfer complete flow)
+   Semana 8-9:   P1-7, P2-7, P2-8 (notifications transactional + SMTP)
+   Semana 10-11: P2-1, P2-2, P2-3, P2-4 (security headers + auth routes)
+   Semana 12-13: P2-5, P2-6 (Ed25519 signatures + Merkle proofs)
+   Semana 14:    P2-9, P2-10, P2-15, P2-16 (CI/CD + workers)
+   Semana 15-16: P2-11, P2-12, P2-13, P2-14 (testing coverage)
+   Backlog:      P3-1 a P3-8
 ```
+
+### Commits de la sesión anterior
+
+| Commit | Descripción |
+|--------|-------------|
+| `625c4c8` | P0-1/2/3/4/5 + P1-6: encryption keys, hash fix, DEK envelope, ApiAuth filter, decryptDocument() |
 
 ---
 

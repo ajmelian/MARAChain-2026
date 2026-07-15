@@ -183,6 +183,22 @@ $filterParams  = [
                                         <?= esc($transfer->documentId) ?>
                                     </p>
                                 </div>
+                                <?php if (in_array($status, ['ACCESSED', 'DOWNLOADED'], true)): ?>
+                                <div class="action-buttons d-flex align-items-center ml-3" onclick="event.stopPropagation();">
+                                    <form method="post" action="/transfers/<?= esc($transfer->id) ?>/accept" class="d-inline mr-1">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-sm btn-success" title="Aceptar">
+                                            <i class="zmdi zmdi-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="/transfers/<?= esc($transfer->id) ?>/reject" class="d-inline">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Rechazar">
+                                            <i class="zmdi zmdi-close"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>

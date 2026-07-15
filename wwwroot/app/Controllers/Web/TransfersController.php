@@ -204,4 +204,56 @@ class TransfersController extends BaseWebController
             'badgeClass'  => $badgeClass,
         ]);
     }
+
+    /**
+     * POST /transfers/{id}/accept — Accept a transfer (web).
+     *
+     * @param string $id Transfer UUID
+     *
+     * @return \CodeIgniter\HTTP\RedirectResponse
+     *
+     * @since 1.5.0
+     */
+    public function accept(string $id): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $transfer = $this->transferModel->freshEntity($id);
+
+        if ($transfer === null) {
+            return redirect()->to('/inbox')->with('error', 'Transferencia no encontrada.');
+        }
+
+        try {
+            $this->transferModel->transitionStatus($transfer, 'ACCEPTED');
+        } catch (\Throwable $e) {
+            return redirect()->to('/inbox')->with('error', $e->getMessage());
+        }
+
+        return redirect()->to('/inbox')->with('message', 'Transferencia aceptada.');
+    }
+
+    /**
+     * POST /transfers/{id}/reject — Reject a transfer (web).
+     *
+     * @param string $id Transfer UUID
+     *
+     * @return \CodeIgniter\HTTP\RedirectResponse
+     *
+     * @since 1.5.0
+     */
+    public function reject(string $id): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $transfer = $this->transferModel->freshEntity($id);
+
+        if ($transfer === null) {
+            return redirect()->to('/inbox')->with('error', 'Transferencia no encontrada.');
+        }
+
+        try {
+            $this->transferModel->transitionStatus($transfer, 'REJECTED');
+        } catch (\Throwable $e) {
+            return redirect()->to('/inbox')->with('error', $e->getMessage());
+        }
+
+        return redirect()->to('/inbox')->with('message', 'Transferencia rechazada.');
+    }
 }

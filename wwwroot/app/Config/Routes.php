@@ -33,6 +33,8 @@ $routes->group('', ['filter' => 'session'], static function (RouteCollection $ro
     $routes->get('inbox', 'Web\TransfersController::inbox');
     $routes->get('outbox', 'Web\TransfersController::outbox');
     $routes->get('transfers/new', 'Web\TransfersController::new');
+    $routes->post('transfers/(:segment)/accept', 'Web\TransfersController::accept/$1');
+    $routes->post('transfers/(:segment)/reject', 'Web\TransfersController::reject/$1');
 
     $routes->get('profile', 'Web\ProfileController::index');
 

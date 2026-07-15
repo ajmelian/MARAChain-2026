@@ -9,7 +9,10 @@ use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
 
 /**
- * AuthControllerTest — HTTP smoke tests for auth pages.
+ * AuthControllerTest — SHIELD authentication smoke tests on MySQL.
+ *
+ * Uses DatabaseTestTrait with $refresh = false to keep SHIELD tables
+ * intact between tests.
  *
  * @coversNothing
  * @internal
@@ -19,18 +22,34 @@ final class AuthControllerTest extends CIUnitTestCase
     use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
+    protected $refresh   = false;
     protected $namespace = 'App';
-
-    public function testLoginPageReturns200(): void
-    {
-        $this->markTestSkipped('SHIELD requires full environment for auth view tests.');
-    }
 
     public function testRegisterPageReturns200(): void
     {
         $result = $this->get('/register');
         $this->assertSame(200, $result->response()->getStatusCode());
+    }
+
+    public function testRegisterPageContainsForm(): void
+    {
+        $result = $this->get('/register');
+        $this->assertStringContainsString('<form', $result->response()->getBody());
+    }
+
+    public function testRegisterPostWithoutEmailRedirects(): void
+    {
+        $result = $this->post('/register', []);
+        $this->assertSame(302, $result->response()->getStatusCode());
+    }
+
+    public function testLoginPostWithInvalidCredentialsRedirects(): void
+    {
+        $result = $this->post('/login', [
+            'email'    => 'nonexistent@test.com',
+            'password' => 'wrong',
+        ]);
+        $this->assertSame(302, $result->response()->getStatusCode());
     }
 
     public function testLogoutRedirects(): void

@@ -2,38 +2,32 @@
 
 declare(strict_types=1);
 
-namespace CodeIgniter\Settings\Database\Migrations;
+namespace App\Database\Migrations;
 
-use CodeIgniter\Database\Forge;
 use CodeIgniter\Database\Migration;
-use CodeIgniter\Settings\Config\Settings;
 
-class AddContextColumn extends Migration
+class AppAddContextColumn extends Migration
 {
-    private readonly Settings $config;
-
-    public function __construct(?Forge $forge = null)
-    {
-        $this->config  = config('Settings');
-        $this->DBGroup = $this->config->database['group'] ?? null;
-
-        parent::__construct($forge);
-    }
-
     public function up(): void
     {
-        $this->forge->addColumn($this->config->database['table'], [
+        $context = [
             'context' => [
                 'type'       => 'varchar',
                 'constraint' => 255,
                 'null'       => true,
                 'after'      => 'type',
             ],
-        ]);
+        ];
+
+        if (! $this->db->fieldExists('context', 'settings')) {
+            $this->forge->addColumn('settings', $context);
+        }
     }
 
     public function down(): void
     {
-        $this->forge->dropColumn($this->config->database['table'], 'context');
+        if ($this->db->fieldExists('context', 'settings')) {
+            $this->forge->dropColumn('settings', 'context');
+        }
     }
 }

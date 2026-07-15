@@ -129,7 +129,7 @@ final class NotificationModelTest extends CIUnitTestCase
     }
 
     /**
-     * Finds notifications by recipient email address.
+     * Finds notifications by recipient email address with actual data.
      *
      * @test
      */
@@ -137,9 +137,36 @@ final class NotificationModelTest extends CIUnitTestCase
     {
         $email = 'destinatario@example.com';
 
+        // Create notifications for the target email.
+        $this->model->createNotification([
+            'recipientEmail'   => $email,
+            'notificationType' => 'transfer_available',
+            'subject'          => 'First notification',
+            'bodyText'         => 'First.',
+            'priority'         => 'normal',
+        ]);
+
+        $this->model->createNotification([
+            'recipientEmail'   => $email,
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Second notification',
+            'bodyText'         => 'Second.',
+            'priority'         => 'high',
+        ]);
+
+        // Create a notification for a different email.
+        $this->model->createNotification([
+            'recipientEmail'   => 'other@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Other notification',
+            'bodyText'         => 'Other.',
+            'priority'         => 'normal',
+        ]);
+
         $results = $this->model->findByRecipientEmail($email);
 
         $this->assertIsArray($results);
+        $this->assertCount(2, $results);
 
         foreach ($results as $notification) {
             $this->assertInstanceOf(Notification::class, $notification);
@@ -148,17 +175,53 @@ final class NotificationModelTest extends CIUnitTestCase
     }
 
     /**
-     * Finds notifications related to a specific transfer.
+     * Finds notifications by recipient email with no matches returns empty.
+     *
+     * @test
+     */
+    public function testFindByRecipientEmailNoMatch(): void
+    {
+        $results = $this->model->findByRecipientEmail('nonexistent@example.com');
+
+        $this->assertIsArray($results);
+        $this->assertCount(0, $results);
+    }
+
+    /**
+     * Finds notifications related to a specific transfer with actual data.
      *
      * @test
      */
     public function testFindByTransferId(): void
     {
-        $transferId = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
+        $transferId = 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6';
+
+        // Notifications without transferId should not match the query
+        $this->model->createNotification([
+            'recipientEmail'   => 'test@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Transfer notification',
+            'bodyText'         => 'You have a transfer.',
+            'priority'         => 'normal',
+        ]);
 
         $results = $this->model->findByTransferId($transferId);
 
         $this->assertIsArray($results);
+        $this->assertCount(0, $results);
+    }
+
+    /**
+     * Finds notifications by transfer ID with no matches returns empty.
+     *
+     * @test
+     */
+    public function testFindByTransferIdNoMatch(): void
+    {
+        $results = $this->model->findByTransferId('00000000-0000-0000-0000-000000000000');
+
+        $this->assertIsArray($results);
+        $this->assertCount(0, $results);
     }
 
     // ────────────────────────────────────────────────
@@ -354,5 +417,143 @@ final class NotificationModelTest extends CIUnitTestCase
         $this->assertSame('DEAD_LETTER', $notification->status);
         $this->assertTrue($notification->isDeadLetter());
         $this->assertFalse($notification->canRetry());
+    }
+
+    // ────────────────────────────────────────────────
+    //  MODEL-LEVEL canRetry
+    // ────────────────────────────────────────────────
+
+    /**
+     * The model's canRetry method returns true for a PENDING notification.
+     *
+     * @test
+     */
+    public function testModelCanRetryPending(): void
+    {
+        $notification = $this->model->createNotification([
+            'recipientEmail'  => 'test@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Model can retry',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+
+        $this->assertTrue($this->model->canRetry($notification->id));
+    }
+
+    /**
+     * The model's canRetry method returns false for a SENT notification.
+     *
+     * @test
+     */
+    public function testModelCanRetrySent(): void
+    {
+        $notification = $this->model->createNotification([
+            'recipientEmail'  => 'test@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Already sent',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+
+        $this->model->markAsSent($notification->id, 'prov-msg-123');
+
+        $this->assertFalse($this->model->canRetry($notification->id));
+    }
+
+    /**
+     * The model's canRetry method returns false for a non-existing notification.
+     *
+     * @test
+     */
+    public function testModelCanRetryNonExisting(): void
+    {
+        $this->assertFalse($this->model->canRetry('00000000-0000-0000-0000-000000000000'));
+    }
+
+    // ────────────────────────────────────────────────
+    //  MARK AS SENDING — LAST ATTEMPT TIMESTAMP
+    // ────────────────────────────────────────────────
+
+    /**
+     * Marking as SENDING records the lastAttemptAt timestamp.
+     *
+     * @test
+     */
+    public function testMarkAsSendingSetsLastAttemptAt(): void
+    {
+        $notification = $this->model->createNotification([
+            'recipientEmail'  => 'test@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Sending timestamp test',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+
+        $this->assertNull($notification->lastAttemptAt);
+
+        $updated = $this->model->markAsSending($notification->id);
+
+        $this->assertSame('SENDING', $updated->status);
+        $this->assertNotNull($updated->lastAttemptAt);
+    }
+
+    // ────────────────────────────────────────────────
+    //  FIND PENDING — WITH DATA
+    // ────────────────────────────────────────────────
+
+    /**
+     * findPending returns only notifications with PENDING status when
+     * mixed-status records exist.
+     *
+     * @test
+     */
+    public function testFindPendingWithMixedStatuses(): void
+    {
+        // Create PENDING
+        $this->model->createNotification([
+            'recipientEmail'  => 'pending1@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Pending 1',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+
+        $this->model->createNotification([
+            'recipientEmail'  => 'pending2@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Pending 2',
+            'bodyText'         => 'Test.',
+            'priority'         => 'high',
+        ]);
+
+        // Create SENT (should not appear)
+        $sent = $this->model->createNotification([
+            'recipientEmail'  => 'sent@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Sent',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+        $this->model->markAsSent($sent->id, 'prov-1');
+
+        // Create FAILED (should not appear)
+        $failed = $this->model->createNotification([
+            'recipientEmail'  => 'failed@example.com',
+            'notificationType' => 'transfer_available',
+            'subject'          => 'Failed',
+            'bodyText'         => 'Test.',
+            'priority'         => 'normal',
+        ]);
+        $this->model->markAsFailed($failed->id, 'SMTP error');
+
+        $pending = $this->model->findPending();
+
+        $this->assertIsArray($pending);
+        $this->assertCount(2, $pending);
+
+        foreach ($pending as $n) {
+            $this->assertSame('PENDING', $n->status);
+        }
     }
 }

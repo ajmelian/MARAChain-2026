@@ -75,7 +75,7 @@ class StorageService
             'manifestJson'     => json_encode($envelope, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'encryptionFormat' => 'marachain-envelope',
             'contentCipher'    => $envelope['contentCipher'] ?? 'AES-256-GCM',
-            'encryptedAt'      => date('Y-m-d H:i:s'),
+            'encrypted_at'      => date('Y-m-d H:i:s'),
             'version'          => 1,
             'status'           => 'ENCRYPTED',
         ]);

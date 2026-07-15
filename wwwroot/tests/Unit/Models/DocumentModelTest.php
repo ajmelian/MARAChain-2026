@@ -358,4 +358,242 @@ final class DocumentModelTest extends CIUnitTestCase
         // versions or use a new ID — we only assert that it is
         // a valid Document entity.
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // SPECIFIC LIFECYCLE METHODS
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Sealing a document transitions from DRAFT to SEALED.
+     *
+     * @test
+     */
+    public function testSealDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Sealable Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('m', 64),
+        ]);
+
+        $this->assertTrue($doc->isDraft());
+
+        $sealed = $this->model->sealDocument($doc);
+
+        $this->assertSame('SEALED', $sealed->status);
+        $this->assertTrue($sealed->isSealed());
+        $this->assertNotNull($sealed->sealedAt);
+        $this->assertTrue($sealed->isImmutable());
+    }
+
+    /**
+     * Sealing an already-sealed document throws an exception.
+     *
+     * @test
+     */
+    public function testSealAlreadySealedDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Already Sealed',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('n', 64),
+        ]);
+
+        $this->model->sealDocument($doc);
+
+        $this->expectException(\RuntimeException::class);
+        $this->model->sealDocument($doc);
+    }
+
+    /**
+     * Encrypting a sealed document transitions from SEALED to ENCRYPTED.
+     *
+     * @test
+     */
+    public function testEncryptDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Encryptable Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('o', 64),
+        ]);
+
+        $sealed = $this->model->sealDocument($doc);
+
+        $encrypted = $this->model->encryptDocument($sealed);
+
+        $this->assertSame('ENCRYPTED', $encrypted->status);
+        $this->assertTrue($encrypted->isEncrypted());
+        $this->assertNotNull($encrypted->encryptedAt);
+    }
+
+    /**
+     * Encrypting a non-sealed document throws an exception.
+     *
+     * @test
+     */
+    public function testEncryptNonSealedDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Non-Sealed Encrypt',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('p', 64),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->model->encryptDocument($doc);
+    }
+
+    /**
+     * Archiving an encrypted document transitions from ENCRYPTED to ARCHIVED.
+     *
+     * @test
+     */
+    public function testArchiveDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Archivable Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('q', 64),
+        ]);
+
+        $sealed    = $this->model->sealDocument($doc);
+        $encrypted = $this->model->encryptDocument($sealed);
+
+        $archived = $this->model->archiveDocument($encrypted);
+
+        $this->assertSame('ARCHIVED', $archived->status);
+        $this->assertTrue($archived->isArchived());
+        $this->assertNotNull($archived->archivedAt);
+    }
+
+    /**
+     * Destroying an archived document transitions from ARCHIVED to DESTROYED.
+     *
+     * @test
+     */
+    public function testDestroyDocument(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Destructible Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('r', 64),
+        ]);
+
+        $sealed    = $this->model->sealDocument($doc);
+        $encrypted = $this->model->encryptDocument($sealed);
+        $archived  = $this->model->archiveDocument($encrypted);
+
+        $destroyed = $this->model->destroyDocument($archived);
+
+        $this->assertSame('DESTROYED', $destroyed->status);
+        $this->assertTrue($destroyed->isDestroyed());
+        $this->assertNotNull($destroyed->destroyedAt);
+    }
+
+    /**
+     * Destroying an archived document marks it as destroyed,
+     * and no further transitions are possible from DESTROYED.
+     *
+     * @test
+     */
+    public function testDestroyedDocumentIsTerminal(): void
+    {
+        $doc = $this->model->create([
+            'title'          => 'Terminal Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 5000,
+            'fileHashSha256' => str_repeat('s', 64),
+        ]);
+
+        $sealed    = $this->model->sealDocument($doc);
+        $encrypted = $this->model->encryptDocument($sealed);
+        $archived  = $this->model->archiveDocument($encrypted);
+        $this->model->destroyDocument($archived);
+
+        $this->expectException(\RuntimeException::class);
+        $this->model->updateStatus($archived, 'DRAFT');
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // FIND — EDGE CASES
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Finding a document by a non-existing file hash returns null.
+     *
+     * @test
+     */
+    public function testFindByFileHashNonExisting(): void
+    {
+        $found = $this->model->findByFileHash(str_repeat('z', 64));
+
+        $this->assertNull($found);
+    }
+
+    /**
+     * Finding documents by owner ID when owner has no documents
+     * returns an empty array.
+     *
+     * @test
+     */
+    public function testFindByOwnerIdEmpty(): void
+    {
+        // Create a fresh user with no documents.
+        $emptyOwner = (new UserModel())->create([
+            'firstName'    => 'Empty',
+            'lastName'     => 'Owner',
+            'email'        => 'empty.owner@example.com',
+            'identityType' => 'physical',
+        ]);
+
+        $docs = $this->model->findByOwnerId($emptyOwner->id);
+
+        $this->assertIsArray($docs);
+        $this->assertCount(0, $docs);
+    }
+
+    /**
+     * Creating a new version within a transaction guards against TOCTOU
+     * on the version number.
+     *
+     * @test
+     */
+    public function testCreateNewVersionFromExistingVersion(): void
+    {
+        $original = $this->model->create([
+            'title'          => 'Multi Version Doc',
+            'ownerId'        => $this->owner->id,
+            'mimeType'       => 'application/pdf',
+            'fileSize'       => 1000,
+            'fileHashSha256' => str_repeat('t', 64),
+        ]);
+
+        $v2 = $this->model->createNewVersion($original, [
+            'fileSize'       => 2000,
+            'fileHashSha256' => str_repeat('u', 64),
+        ]);
+        $this->assertSame(2, $v2->version);
+        $this->assertSame('DRAFT', $v2->status);
+
+        $v3 = $this->model->createNewVersion($v2, [
+            'fileSize'       => 3000,
+            'fileHashSha256' => str_repeat('v', 64),
+        ]);
+        $this->assertSame(3, $v3->version);
+        $this->assertSame(3000, $v3->fileSize);
+    }
 }

@@ -290,4 +290,131 @@ final class DeviceModelTest extends CIUnitTestCase
             );
         }
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // EDGE CASES
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Finding devices by user ID for a user with no devices returns empty array.
+     *
+     * @test
+     */
+    public function testFindByUserIdNoDevices(): void
+    {
+        $emptyUser = (new UserModel())->create([
+            'firstName'    => 'No',
+            'lastName'     => 'Devices',
+            'email'        => 'no.devices@example.com',
+            'identityType' => 'physical',
+        ]);
+
+        $devices = $this->model->findByUserId($emptyUser->id);
+
+        $this->assertIsArray($devices);
+        $this->assertCount(0, $devices);
+    }
+
+    /**
+     * Finding active devices when all are revoked returns empty array.
+     *
+     * @test
+     */
+    public function testFindActiveByUserIdAllRevoked(): void
+    {
+        // Create multiple devices for the owner.
+        $d1 = $this->model->create([
+            'userId'               => $this->owner->id,
+            'deviceName'           => 'Device A',
+            'deviceType'           => 'desktop',
+            'publicKeyFingerprint' => str_repeat('x', 64),
+            'publicKeyAlgorithm'   => 'ECDSA-P256',
+        ]);
+
+        $d2 = $this->model->create([
+            'userId'               => $this->owner->id,
+            'deviceName'           => 'Device B',
+            'deviceType'           => 'mobile',
+            'publicKeyFingerprint' => str_repeat('y', 64),
+            'publicKeyAlgorithm'   => 'ECDSA-P256',
+        ]);
+
+        // Revoke both.
+        $this->model->revokeDevice($d1);
+        $this->model->revokeDevice($d2);
+
+        $active = $this->model->findActiveByUserId($this->owner->id);
+
+        $this->assertIsArray($active);
+        $this->assertCount(0, $active);
+    }
+
+    /**
+     * A revoked device reports isRevoked() as true.
+     *
+     * @test
+     */
+    public function testRevokedDeviceIsRevoked(): void
+    {
+        $device = $this->model->create([
+            'userId'               => $this->owner->id,
+            'deviceName'           => 'Revoked Check',
+            'deviceType'           => 'mobile',
+            'publicKeyFingerprint' => str_repeat('w', 64),
+            'publicKeyAlgorithm'   => 'ECDSA-P256',
+        ]);
+
+        $this->assertTrue($device->isActive());
+        $this->assertFalse($device->isRevoked());
+
+        $revoked = $this->model->revokeDevice($device);
+
+        $this->assertTrue($revoked->isRevoked());
+        $this->assertFalse($revoked->isActive());
+    }
+
+    /**
+     * A lost device reports isLost() as true.
+     *
+     * @test
+     */
+    public function testLostDeviceIsLost(): void
+    {
+        $device = $this->model->create([
+            'userId'               => $this->owner->id,
+            'deviceName'           => 'Lost Check',
+            'deviceType'           => 'mobile',
+            'publicKeyFingerprint' => str_repeat('v', 64),
+            'publicKeyAlgorithm'   => 'ECDSA-P256',
+        ]);
+
+        $lost = $this->model->markDeviceLost($device);
+
+        $this->assertTrue($lost->isLost());
+        $this->assertFalse($lost->isActive());
+    }
+
+    /**
+     * Creating a device with optional fields sets them correctly.
+     *
+     * @test
+     */
+    public function testCreateDeviceWithOptionalFields(): void
+    {
+        $device = $this->model->create([
+            'userId'               => $this->owner->id,
+            'deviceName'           => 'Full Device',
+            'deviceType'           => 'laptop',
+            'operatingSystem'      => 'macOS 15.0',
+            'browser'              => 'Chrome 131',
+            'publicKeyFingerprint' => str_repeat('u', 64),
+            'publicKeyAlgorithm'   => 'ECDSA-P256',
+            'cryptographicEpoch'   => 2,
+        ]);
+
+        $this->assertSame('macOS 15.0', $device->operatingSystem);
+        $this->assertSame('Chrome 131', $device->browser);
+        $this->assertSame(2, $device->cryptographicEpoch);
+        $this->assertTrue($device->isActive());
+    }
 }

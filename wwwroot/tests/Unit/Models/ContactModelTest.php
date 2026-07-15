@@ -190,7 +190,7 @@ final class ContactModelTest extends CIUnitTestCase
     // ────────────────────────────────────────────────
 
     /**
-     * Finds all contacts belonging to an owner user.
+     * Finds all contacts belonging to an owner user with actual data.
      *
      * @test
      */
@@ -198,9 +198,49 @@ final class ContactModelTest extends CIUnitTestCase
     {
         $ownerId = $this->ownerUserId;
 
+        $this->model->createContact([
+            'ownerId'      => $ownerId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Contact A',
+            'emailPrimary' => 'contact.a@example.com',
+        ]);
+
+        $this->model->createContact([
+            'ownerId'      => $ownerId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Contact B',
+            'emailPrimary' => 'contact.b@example.com',
+        ]);
+
         $results = $this->model->findByOwnerId($ownerId);
 
         $this->assertIsArray($results);
+        $this->assertCount(2, $results);
+
+        foreach ($results as $contact) {
+            $this->assertInstanceOf(Contact::class, $contact);
+            $this->assertSame($ownerId, $contact->ownerId);
+        }
+    }
+
+    /**
+     * Finding contacts by owner ID with no contacts returns empty array.
+     *
+     * @test
+     */
+    public function testFindByOwnerIdEmpty(): void
+    {
+        $emptyUser = $this->userModel->create([
+            'firstName'    => 'NoContact',
+            'lastName'     => 'User',
+            'email'        => 'nocontact' . bin2hex(random_bytes(4)) . '@example.com',
+            'identityType' => 'physical',
+        ]);
+
+        $results = $this->model->findByOwnerId($emptyUser->id);
+
+        $this->assertIsArray($results);
+        $this->assertCount(0, $results);
     }
 
     /**
@@ -226,20 +266,52 @@ final class ContactModelTest extends CIUnitTestCase
     }
 
     /**
-     * Finds contacts filtered by identity status.
+     * Finding a contact by a non-existing email returns null.
+     *
+     * @test
+     */
+    public function testFindByEmailNonExisting(): void
+    {
+        $result = $this->model->findByEmail('nonexistent@example.com');
+
+        $this->assertNull($result);
+    }
+
+    /**
+     * Finds contacts filtered by identity status with actual data.
      *
      * @test
      */
     public function testFindByStatus(): void
     {
-        $results = $this->model->findByStatus('pending');
+        // Create a pending contact (default)
+        $this->model->createContact([
+            'ownerId'      => $this->ownerUserId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Pending Contact',
+            'emailPrimary' => 'pending.contact@example.com',
+        ]);
 
-        $this->assertIsArray($results);
+        // Create and verify another
+        $verified = $this->model->createContact([
+            'ownerId'      => $this->ownerUserId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Verified Contact',
+            'emailPrimary' => 'verified.contact@example.com',
+        ]);
+        $this->model->updateIdentityStatus($verified->id, 'invited');
+        $this->model->updateIdentityStatus($verified->id, 'verified');
 
-        foreach ($results as $contact) {
-            $this->assertInstanceOf(Contact::class, $contact);
-            $this->assertSame('pending', $contact->identityStatus);
-        }
+        $pendingResults  = $this->model->findByStatus('pending');
+        $verifiedResults = $this->model->findByStatus('verified');
+
+        $this->assertIsArray($pendingResults);
+        $this->assertCount(1, $pendingResults);
+        $this->assertSame('pending', $pendingResults[0]->identityStatus);
+
+        $this->assertIsArray($verifiedResults);
+        $this->assertCount(1, $verifiedResults);
+        $this->assertSame('verified', $verifiedResults[0]->identityStatus);
     }
 
     // ────────────────────────────────────────────────
@@ -324,5 +396,101 @@ final class ContactModelTest extends CIUnitTestCase
         $this->assertSame('rejected', $contact->identityStatus);
         $this->assertFalse($contact->isVerified());
         $this->assertFalse($contact->isPending());
+    }
+
+    /**
+     * The rejectIdentity model method sets status to rejected directly.
+     *
+     * @test
+     */
+    public function testRejectIdentityMethod(): void
+    {
+        $contact = $this->model->createContact([
+            'ownerId'      => $this->ownerUserId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Rejected',
+            'lastName'     => 'Direct',
+            'emailPrimary' => 'rejected.direct@example.com',
+        ]);
+
+        $this->assertTrue($contact->isPending());
+
+        $rejected = $this->model->rejectIdentity($contact);
+
+        $this->assertSame('rejected', $rejected->identityStatus);
+        $this->assertFalse($rejected->isVerified());
+        $this->assertFalse($rejected->isPending());
+    }
+
+    /**
+     * Full identity lifecycle: pending → invited → verified with link.
+     *
+     * @test
+     */
+    public function testFullIdentityLifecycle(): void
+    {
+        $contact = $this->model->createContact([
+            'ownerId'      => $this->ownerUserId,
+            'contactType'  => 'physical_person',
+            'firstName'    => 'Lifecycle',
+            'lastName'     => 'Test',
+            'emailPrimary' => 'lifecycle@example.com',
+        ]);
+
+        // pending → invited
+        $contact = $this->model->updateIdentityStatus($contact->id, 'invited');
+        $this->assertSame('invited', $contact->identityStatus);
+
+        // Can go from invited → pending (correction)
+        $contact = $this->model->updateIdentityStatus($contact->id, 'pending');
+        $this->assertSame('pending', $contact->identityStatus);
+
+        // pending → invited → verified
+        $contact = $this->model->updateIdentityStatus($contact->id, 'invited');
+        $contact = $this->model->verifyAndLink(
+            $contact->id,
+            $this->linkedUserId,
+            'ab' . str_repeat('c', 62)
+        );
+
+        $this->assertSame('verified', $contact->identityStatus);
+        $this->assertSame($this->linkedUserId, $contact->linkedUserId);
+        $this->assertTrue($contact->isVerified());
+        $this->assertTrue($contact->isLinked());
+    }
+
+    /**
+     * Creating a contact with all optional fields preserves them.
+     *
+     * @test
+     */
+    public function testCreateContactWithAllFields(): void
+    {
+        $data = [
+            'ownerId'        => $this->ownerUserId,
+            'contactType'    => 'physical_person',
+            'firstName'      => 'Complete',
+            'lastName'       => 'Contact',
+            'emailPrimary'   => 'complete.contact@example.com',
+            'phone'          => '+34600123456',
+            'telegramAccount'=> '@completeuser',
+            'country'        => 'ES',
+            'address'        => 'Calle Mayor 1',
+            'postalCode'     => '28001',
+            'province'       => 'Madrid',
+            'notes'          => 'Important contact',
+        ];
+
+        $contact = $this->model->createContact($data);
+
+        $this->assertSame('Complete', $contact->firstName);
+        $this->assertSame('Contact', $contact->lastName);
+        $this->assertSame('+34600123456', $contact->phone);
+        $this->assertSame('@completeuser', $contact->telegramAccount);
+        $this->assertSame('ES', $contact->country);
+        $this->assertSame('Calle Mayor 1', $contact->address);
+        $this->assertSame('28001', $contact->postalCode);
+        $this->assertSame('Madrid', $contact->province);
+        $this->assertSame('Important contact', $contact->notes);
     }
 }

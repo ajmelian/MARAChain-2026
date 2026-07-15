@@ -135,7 +135,7 @@ final class SignatureRequestModelTest extends CIUnitTestCase
     // ────────────────────────────────────────────────
 
     /**
-     * Finds all signature requests belonging to a document.
+     * Finds all signature requests belonging to a document with actual data.
      *
      * @test
      */
@@ -143,13 +143,44 @@ final class SignatureRequestModelTest extends CIUnitTestCase
     {
         $documentId = $this->testDocumentId;
 
+        // Create two signature requests for the same document.
+        $this->model->createSignatureRequest([
+            'documentId'        => $documentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['hash' => '1']),
+            'manifestHash'      => str_repeat('a', 64),
+            'nonce'             => str_repeat('1', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ]);
+
+        $this->model->createSignatureRequest([
+            'documentId'        => $documentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['hash' => '2']),
+            'manifestHash'      => str_repeat('b', 64),
+            'nonce'             => str_repeat('2', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ]);
+
         $results = $this->model->findByDocumentId($documentId);
 
         $this->assertIsArray($results);
+        $this->assertCount(2, $results);
+
+        foreach ($results as $sr) {
+            $this->assertInstanceOf(SignatureRequest::class, $sr);
+            $this->assertSame($documentId, $sr->documentId);
+        }
     }
 
     /**
-     * Finds all signature requests for a given user.
+     * Finds all signature requests for a given user with actual data.
      *
      * @test
      */
@@ -157,21 +188,73 @@ final class SignatureRequestModelTest extends CIUnitTestCase
     {
         $userId = $this->testUserId;
 
+        $this->model->createSignatureRequest([
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $userId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['hash' => '1']),
+            'manifestHash'      => str_repeat('c', 64),
+            'nonce'             => str_repeat('3', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ]);
+
         $results = $this->model->findByUserId($userId);
 
         $this->assertIsArray($results);
+        $this->assertCount(1, $results);
+
+        foreach ($results as $sr) {
+            $this->assertInstanceOf(SignatureRequest::class, $sr);
+            $this->assertSame($userId, $sr->userId);
+        }
     }
 
     /**
-     * Finds signature requests filtered by status.
+     * Finds signature requests filtered by status with actual data.
      *
      * @test
      */
     public function testFindByStatus(): void
     {
-        $results = $this->model->findByStatus('CREATED');
+        // Create a CREATED request (default)
+        $this->model->createSignatureRequest([
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['hash' => '1']),
+            'manifestHash'      => str_repeat('d', 64),
+            'nonce'             => str_repeat('4', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ]);
 
-        $this->assertIsArray($results);
+        // Create and consume another (CONSUMED)
+        $consumed = $this->model->createSignatureRequest([
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['hash' => '2']),
+            'manifestHash'      => str_repeat('e', 64),
+            'nonce'             => str_repeat('5', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ]);
+        $this->model->consumeSignature($consumed->id);
+
+        $createdResults  = $this->model->findByStatus('CREATED');
+        $consumedResults = $this->model->findByStatus('CONSUMED');
+
+        $this->assertIsArray($createdResults);
+        $this->assertCount(1, $createdResults);
+        $this->assertSame('CREATED', $createdResults[0]->status);
+
+        $this->assertIsArray($consumedResults);
+        $this->assertCount(1, $consumedResults);
+        $this->assertSame('CONSUMED', $consumedResults[0]->status);
     }
 
     /**
@@ -296,5 +379,120 @@ final class SignatureRequestModelTest extends CIUnitTestCase
 
         $this->assertTrue($sr->isCompleted());
         $this->assertFalse($sr->isPending());
+    }
+
+    // ────────────────────────────────────────────────
+    //  MARK AS FAILED
+    // ────────────────────────────────────────────────
+
+    /**
+     * Marking a signature request as failed records status, timestamp, and reason.
+     *
+     * @test
+     */
+    public function testMarkAsFailed(): void
+    {
+        $data = [
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['document_hash' => 'abc123']),
+            'manifestHash'      => str_repeat('f', 64),
+            'nonce'             => str_repeat('6', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ];
+
+        $sr = $this->model->createSignatureRequest($data);
+        $this->assertSame('CREATED', $sr->status);
+
+        $failed = $this->model->markAsFailed($sr, 'Provider rejected the signature: invalid certificate');
+
+        $this->assertSame('FAILED', $failed->status);
+        $this->assertTrue($failed->isFailed());
+        $this->assertNotNull($failed->failedAt);
+        $this->assertSame('Provider rejected the signature: invalid certificate', $failed->failureReason);
+    }
+
+    // ────────────────────────────────────────────────
+    //  FIND BY NONCE — EDGE CASES
+    // ────────────────────────────────────────────────
+
+    /**
+     * Finding a signature request by a non-existing nonce returns null.
+     *
+     * @test
+     */
+    public function testFindByNonceNonExisting(): void
+    {
+        $result = $this->model->findByNonce(str_repeat('z', 64));
+
+        $this->assertNull($result);
+    }
+
+    // ────────────────────────────────────────────────
+    //  UPDATE STATUS EDGE CASES
+    // ────────────────────────────────────────────────
+
+    /**
+     * updateStatus sets completedAt when transitioning to VALIDATED.
+     *
+     * @test
+     */
+    public function testUpdateStatusToValidatedSetsCompletedAt(): void
+    {
+        $data = [
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['document_hash' => 'test']),
+            'manifestHash'      => str_repeat('g', 64),
+            'nonce'             => str_repeat('7', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ];
+
+        $sr = $this->model->createSignatureRequest($data);
+        $this->assertNull($sr->completedAt);
+
+        $sr = $this->model->updateStatus($sr->id, 'PROVIDER_REQUESTED');
+        $this->assertNull($sr->completedAt);
+
+        $sr = $this->model->updateStatus($sr->id, 'PROVIDER_COMPLETED');
+        $this->assertNull($sr->completedAt);
+
+        $sr = $this->model->updateStatus($sr->id, 'VALIDATED');
+        $this->assertNotNull($sr->completedAt);
+        $this->assertTrue($sr->isCompleted());
+    }
+
+    /**
+     * A consumed signature cannot be consumed again.
+     *
+     * @test
+     */
+    public function testConsumedSignatureIsNotPending(): void
+    {
+        $data = [
+            'documentId'        => $this->testDocumentId,
+            'userId'            => $this->testUserId,
+            'signatureIntent'   => 'document_send',
+            'signatureProvider' => 'fnmt',
+            'manifestJson'      => json_encode(['document_hash' => 'test']),
+            'manifestHash'      => str_repeat('h', 64),
+            'nonce'             => str_repeat('8', 64),
+            'issuedAt'          => '2026-07-13 10:00:00',
+            'expiresAt'         => '2026-07-13 12:00:00',
+        ];
+
+        $sr = $this->model->createSignatureRequest($data);
+        $this->assertTrue($sr->isPending());
+
+        $consumed = $this->model->consumeSignature($sr->id);
+        $this->assertFalse($consumed->isPending());
+        $this->assertTrue($consumed->isConsumed());
+        $this->assertTrue($consumed->isCompleted());
     }
 }

@@ -374,4 +374,191 @@ final class DocumentTransferModelTest extends CIUnitTestCase
         $this->assertSame('REVOKED', $result->status);
         $this->assertNotNull($result->revokedAt);
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // FULL TRANSITION CHAIN
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Tests the complete valid transition chain end-to-end.
+     *
+     * PENDING_RECIPIENT → READY → SENDING → SENT → AVAILABLE →
+     * ACCESSED → DOWNLOADED → ACCEPTED
+     *
+     * @test
+     */
+    public function testFullTransitionChain(): void
+    {
+        $transfer = $this->model->create([
+            'documentId'      => $this->document->id,
+            'senderId'        => $this->sender->id,
+            'recipientId'     => $this->recipient->id,
+            'idempotencyKey'  => str_repeat('k', 64),
+            'securityLevel'   => 'standard',
+        ]);
+
+        $this->assertSame('PENDING_RECIPIENT', $transfer->status);
+
+        // PENDING_RECIPIENT → READY
+        $transfer = $this->model->transitionStatus($transfer, 'READY');
+        $this->assertSame('READY', $transfer->status);
+
+        // READY → SENDING
+        $transfer = $this->model->transitionStatus($transfer, 'SENDING');
+        $this->assertSame('SENDING', $transfer->status);
+
+        // SENDING → SENT
+        $transfer = $this->model->transitionStatus($transfer, 'SENT');
+        $this->assertSame('SENT', $transfer->status);
+
+        // SENT → AVAILABLE
+        $transfer = $this->model->transitionStatus($transfer, 'AVAILABLE');
+        $this->assertSame('AVAILABLE', $transfer->status);
+
+        // AVAILABLE → ACCESSED
+        $transfer = $this->model->transitionStatus($transfer, 'ACCESSED');
+        $this->assertSame('ACCESSED', $transfer->status);
+
+        // ACCESSED → DOWNLOADED
+        $transfer = $this->model->transitionStatus($transfer, 'DOWNLOADED');
+        $this->assertSame('DOWNLOADED', $transfer->status);
+
+        // DOWNLOADED → ACCEPTED
+        $transfer = $this->model->transitionStatus($transfer, 'ACCEPTED');
+        $this->assertSame('ACCEPTED', $transfer->status);
+
+        $this->assertTrue($transfer->isTerminal());
+    }
+
+    /**
+     * Transitioning from ACCEPTED (terminal) to any status fails.
+     *
+     * @test
+     */
+    public function testCannotTransitionFromAccepted(): void
+    {
+        $transfer = $this->model->create([
+            'documentId'      => $this->document->id,
+            'senderId'        => $this->sender->id,
+            'recipientId'     => $this->recipient->id,
+            'idempotencyKey'  => str_repeat('l', 64),
+            'securityLevel'   => 'standard',
+        ]);
+
+        // Advance to ACCEPTED
+        $transfer = $this->model->transitionStatus($transfer, 'READY');
+        $transfer = $this->model->transitionStatus($transfer, 'SENDING');
+        $transfer = $this->model->transitionStatus($transfer, 'SENT');
+        $transfer = $this->model->transitionStatus($transfer, 'AVAILABLE');
+        $transfer = $this->model->transitionStatus($transfer, 'ACCESSED');
+        $transfer = $this->model->transitionStatus($transfer, 'DOWNLOADED');
+        $transfer = $this->model->transitionStatus($transfer, 'ACCEPTED');
+
+        $this->expectException(\RuntimeException::class);
+        $this->model->transitionStatus($transfer, 'DOWNLOADED');
+    }
+
+    /**
+     * Transitioning from REVOKED (terminal) to any status fails.
+     *
+     * @test
+     */
+    public function testCannotTransitionFromRevoked(): void
+    {
+        $transfer = $this->model->create([
+            'documentId'      => $this->document->id,
+            'senderId'        => $this->sender->id,
+            'recipientId'     => $this->recipient->id,
+            'idempotencyKey'  => str_repeat('m', 64),
+            'securityLevel'   => 'standard',
+        ]);
+
+        // Advance and revoke.
+        $this->model->transitionStatus($transfer, 'READY');
+
+        // Re-read fresh from DB to pass to revokeTransfer (which re-reads again internally).
+        $transfer = $this->model->revokeTransfer($transfer);
+
+        $this->assertSame('REVOKED', $transfer->status);
+
+        $this->expectException(\RuntimeException::class);
+        $this->model->transitionStatus($transfer, 'READY');
+    }
+
+    /**
+     * FAILED status can be retried by transitioning back to PENDING_RECIPIENT.
+     *
+     * @test
+     */
+    public function testRetryFromFailed(): void
+    {
+        $transfer = $this->model->create([
+            'documentId'      => $this->document->id,
+            'senderId'        => $this->sender->id,
+            'recipientId'     => $this->recipient->id,
+            'idempotencyKey'  => str_repeat('n', 64),
+            'securityLevel'   => 'standard',
+        ]);
+
+        // Move to FAILED via PENDING_RECIPIENT -> READY, then fail from READY.
+        $this->model->transitionStatus($transfer, 'READY');
+
+        // Insert FAILED directly via DB to simulate a failed state.
+        $this->model->db->table('document_transfers')
+            ->where('id', $transfer->id)
+            ->update(['status' => 'FAILED', 'failed_at' => date('Y-m-d H:i:s')]);
+
+        // Re-read the transfer with the new FAILED status.
+        $row = $this->model->db->table('document_transfers')
+            ->where('id', $transfer->id)
+            ->get()
+            ->getRowArray();
+        $failedTransfer = new DocumentTransfer($row);
+        $this->assertSame('FAILED', $failedTransfer->status);
+
+        // FAILED → PENDING_RECIPIENT (retry)
+        $retried = $this->model->transitionStatus($failedTransfer, 'PENDING_RECIPIENT');
+        $this->assertSame('PENDING_RECIPIENT', $retried->status);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // IDEMPOTENCY KEY LOOKUP
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Finding a transfer by its idempotency key returns the correct entity.
+     *
+     * @test
+     */
+    public function testFindByIdempotencyKey(): void
+    {
+        $key = str_repeat('o', 64);
+
+        $created = $this->model->create([
+            'documentId'      => $this->document->id,
+            'senderId'        => $this->sender->id,
+            'recipientId'     => $this->recipient->id,
+            'idempotencyKey'  => $key,
+            'securityLevel'   => 'standard',
+        ]);
+
+        $found = $this->model->findByIdempotencyKey($key);
+
+        $this->assertInstanceOf(DocumentTransfer::class, $found);
+        $this->assertSame($created->id, $found->id);
+        $this->assertSame($key, $found->idempotencyKey);
+    }
+
+    /**
+     * Finding a transfer by a non-existing idempotency key returns null.
+     *
+     * @test
+     */
+    public function testFindByIdempotencyKeyNonExisting(): void
+    {
+        $found = $this->model->findByIdempotencyKey(str_repeat('z', 64));
+
+        $this->assertNull($found);
+    }
+
 }

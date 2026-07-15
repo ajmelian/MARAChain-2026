@@ -50,12 +50,16 @@ class StorageService
             throw new RuntimeException('Invalid marachain-envelope format.');
         }
 
-        // Verify manifest hash matches
-        $expectedHash = $envelope['manifestHash'] ?? '';
-        $manifestJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // Verify manifest hash matches the file hash (SHA-256 of original document)
+        $manifestHash   = $envelope['manifestHash'] ?? '';
+        $fileHashSha256 = $metadata['fileHashSha256'] ?? '';
 
-        if (! $this->encryptionService->verifyManifestHash($expectedHash, $manifestJson)) {
-            throw new RuntimeException('Manifest hash mismatch — document integrity check failed.');
+        if ($manifestHash !== $fileHashSha256) {
+            throw new RuntimeException(
+                'Manifest hash mismatch — document integrity check failed. '
+                . 'Expected: ' . substr($fileHashSha256, 0, 16)
+                . '..., Got: ' . substr($manifestHash, 0, 16) . '...'
+            );
         }
 
         $documentModel = model(DocumentModel::class);
@@ -66,8 +70,8 @@ class StorageService
             'description'      => $metadata['description'] ?? null,
             'mimeType'         => $metadata['mimeType'] ?? 'application/pdf',
             'fileSize'         => (int) ($metadata['fileSize'] ?? 0),
-            'fileHashSha256'   => $metadata['fileHashSha256'] ?? '',
-            'manifestHash'     => $expectedHash,
+            'fileHashSha256'   => $fileHashSha256,
+            'manifestHash'     => $manifestHash,
             'manifestJson'     => json_encode($envelope, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'encryptionFormat' => 'marachain-envelope',
             'contentCipher'    => $envelope['contentCipher'] ?? 'AES-256-GCM',

@@ -84,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     contentCipher: 'AES-256-GCM',
                     manifestHash: result.fileHash,
                     recipients: [],
-                    iv: result.iv
+                    iv: result.iv,
+                    dek: result.dekHex
                 };
 
                 const metadata = {

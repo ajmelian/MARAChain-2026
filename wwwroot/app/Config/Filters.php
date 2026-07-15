@@ -12,6 +12,7 @@ use CodeIgniter\Filters\InvalidChars;
 use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
+use App\Filters\ApiAuth;
 use App\Filters\SecurityHeaders;
 use App\Filters\Throttle;
 
@@ -34,6 +35,7 @@ class Filters extends BaseFilters
         'secureheaders' => SecureHeaders::class,
         'security'      => SecurityHeaders::class,
         'throttle'      => Throttle::class,
+        'api-auth'      => ApiAuth::class,
         'cors'          => Cors::class,
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,

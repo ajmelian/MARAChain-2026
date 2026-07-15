@@ -137,6 +137,69 @@ const MARACrypto = {
                 .map(b => b.toString(16).padStart(2, '0'))
                 .join(''),
         };
+    },
+
+    /**
+     * Import a raw AES key from a hex-encoded string.
+     *
+     * @param {string} hexKey 64-character hex string (32 bytes)
+     * @returns {Promise<CryptoKey>}
+     *
+     * @since 1.5.0
+     */
+    async importKey(hexKey) {
+        const raw = new Uint8Array(hexKey.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+        return await crypto.subtle.importKey(
+            'raw', raw,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['decrypt']
+        );
+    },
+
+    /**
+     * Decrypt AES-256-GCM ciphertext.
+     *
+     * @param {CryptoKey} key The DEK
+     * @param {ArrayBuffer} ciphertext Encrypted data
+     * @param {string} ivHex 24-character hex string (12 bytes IV)
+     * @returns {Promise<ArrayBuffer>} Decrypted plaintext
+     *
+     * @since 1.5.0
+     */
+    async decrypt(key, ciphertext, ivHex) {
+        const iv = new Uint8Array(ivHex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+        return await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            ciphertext
+        );
+    },
+
+    /**
+     * Full document decryption flow.
+     *
+     * 1. Import the DEK from hex
+     * 2. Decrypt the ciphertext with AES-256-GCM
+     * 3. Verify SHA-256 integrity
+     *
+     * @param {string} dekHex     64-char hex DEK
+     * @param {ArrayBuffer} ciphertext Encrypted file data
+     * @param {string} ivHex     24-char hex IV
+     * @param {string} expectedHash SHA-256 of original file
+     * @returns {Promise<{plaintext: ArrayBuffer, valid: boolean}>}
+     *
+     * @since 1.5.0
+     */
+    async decryptDocument(dekHex, ciphertext, ivHex, expectedHash) {
+        const dek = await this.importKey(dekHex);
+        const plaintext = await this.decrypt(dek, ciphertext, ivHex);
+        const actualHash = await this.sha256(plaintext);
+
+        return {
+            plaintext,
+            valid: actualHash === expectedHash,
+        };
     }
 };
 

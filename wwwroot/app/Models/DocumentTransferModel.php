@@ -72,6 +72,14 @@ class DocumentTransferModel extends Model
             throw new \RuntimeException('Idempotency key is required.');
         }
 
+        if (empty($data['documentId'] ?? '')) {
+            throw new \RuntimeException('Document ID is required.');
+        }
+
+        if (empty($data['recipientId'] ?? '')) {
+            throw new \RuntimeException('Recipient ID is required.');
+        }
+
         $id = \App\Helpers\Uuid::v4();
 
         $row = [

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\DocumentTransferModel;
+use App\Models\NotificationRequestedModel;
+use App\Notifications\NotificationChannel;
 use App\Services\EvidenceService;
 use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -23,6 +25,8 @@ class TransferController extends BaseController
 
     private EvidenceService $evidenceService;
 
+    private NotificationRequestedModel $notificationModel;
+
     /**
      * Constructor.
      *
@@ -30,8 +34,9 @@ class TransferController extends BaseController
      */
     public function __construct()
     {
-        $this->transferModel    = model(DocumentTransferModel::class);
-        $this->evidenceService  = new EvidenceService();
+        $this->transferModel     = model(DocumentTransferModel::class);
+        $this->evidenceService   = new EvidenceService();
+        $this->notificationModel = model(NotificationRequestedModel::class);
     }
 
     /**
@@ -93,23 +98,38 @@ class TransferController extends BaseController
             return $this->failValidationErrors('Invalid JSON body.');
         }
 
-        // Attach the authenticated user as the sender
         $input['senderId'] = session('user_id');
 
-        // Let the model handle validation internally
+        // Transactional: transfer + notification + evidence are atomic
+        $db = $this->transferModel->db;
+        $db->transStart();
+
         try {
             $transfer = $this->transferModel->create($input);
         } catch (\Throwable $e) {
+            $db->transRollback();
+
             return $this->fail($e->getMessage(), 400);
         }
 
-        // Record evidence
+        // Queue email notification atomically with the transfer
+        $this->notificationModel->queue(
+            NotificationChannel::EMAIL,
+            $transfer->recipientId, // placeholder — should resolve recipient email
+            'Nuevo documento recibido en MARAChain',
+            "Ha recibido un documento. Acceda a MARAChain para consultarlo:\nhttps://marachain.local/inbox",
+            $transfer->id,
+            'high'
+        );
+
         $this->evidenceService->documentSent(
             $transfer->id,
             $transfer->senderId,
             $transfer->recipientId,
             $transfer->documentId
         );
+
+        $db->transComplete();
 
         return $this->respondCreated($transfer);
     }

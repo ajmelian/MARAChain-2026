@@ -337,6 +337,13 @@ class FnmtController extends BaseWebController
             return false;
         }
 
+        // Prevent TOTP code reuse within the valid window
+        $usedCodes = session('totp_used_codes') ?? [];
+        $windowKey = floor(time() / 30);
+        if (in_array($code . ':' . $windowKey, $usedCodes, true)) {
+            return false;
+        }
+
         $base32 = $this->base32Decode($secret);
         $timeSlice = floor(time() / 30);
 
@@ -344,6 +351,12 @@ class FnmtController extends BaseWebController
             $expected = $this->computeTotp($base32, $timeSlice + $i);
 
             if (hash_equals($expected, $code)) {
+                // Mark code as used for the current window
+                $usedCodes[] = $code . ':' . $windowKey;
+                // Keep only last 10 entries to prevent session bloat
+                $usedCodes = array_slice($usedCodes, -10);
+                session()->set('totp_used_codes', $usedCodes);
+
                 return true;
             }
         }

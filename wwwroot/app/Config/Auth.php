@@ -210,8 +210,16 @@ class Auth extends ShieldAuth
         'field'              => 'user',
         'allowRemembering'   => true,
         'rememberCookieName' => 'remember',
-        'rememberLength'     => 30 * DAY,
+        'rememberLength'     => 7 * DAY, // 7 dias para remember-me
     ];
+
+    /**
+     * Maximum active sessions per user.
+     * 0 = unlimited.
+     *
+     * @var int
+     */
+    public int $maxActiveSessions = 5;
 
     /**
      * --------------------------------------------------------------------

@@ -1,0 +1,12 @@
+parameters:
+  level: 2
+  paths:
+    - app/
+  excludePaths:
+    - app/Views/*
+    - app/Database/Seeds/*
+    - app/_ide_helper.php
+  bootstrapFiles:
+    - phpstan-bootstrap.php
+includes:
+  - vendor/codeigniter/phpstan-codeigniter/extension.neon

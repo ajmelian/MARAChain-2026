@@ -6,6 +6,11 @@
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4623?style=flat)](https://codeigniter.com/)
 [![SHIELD](https://img.shields.io/badge/SHIELD-1.3-EE4623?style=flat)](https://shield.codeigniter.com/)
 [![License](https://img.shields.io/badge/license-GPL%203.0-green)](./LICENSE)
+[![SonarQube Quality Gate](https://img.shields.io/badge/Quality_Gate-ERROR_(49.5%25)-red?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
+[![SonarQube Reliability](https://img.shields.io/badge/Reliability-A_(0_bugs)-brightgreen?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
+[![SonarQube Security](https://img.shields.io/badge/Security-A_(0_vulns)-brightgreen?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
+[![SonarQube Maintainability](https://img.shields.io/badge/Maintainability-A-0AA0FF?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
+[![Coverage](https://img.shields.io/badge/Coverage-42.1%25-yellow?logo=codecov)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
 
 > Plataforma de intercambio seguro de documentacion con firma electronica
 

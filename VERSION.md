@@ -3,8 +3,8 @@
 ## Current Version
 
 ```
-Version:      1.5.0
-Release Date: 2026-07-14
+Version:      1.6.0
+Release Date: 2026-07-16
 Status:       Development (pre-alpha)
 Codename:     Genesis
 ```
@@ -58,6 +58,7 @@ PATCH — Bug fixes: backward-compatible fixes, security patches,
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
+| [1.6.0](./CHANGELOG.md#160---2026-07-16) | 2026-07-16 | Pre-alpha | Settings table, context column, api-auth filter, notification outbox model, new service/web tests |
 | [1.5.0](./CHANGELOG.md#150---2026-07-14) | 2026-07-14 | Pre-alpha | Notification system: multi-channel outbox (Email, WhatsApp, Telegram, SMS), Provider pattern, CLI worker, global accounts |
 | [1.4.0](./CHANGELOG.md#140---2026-07-14) | 2026-07-14 | Pre-alpha | MVP: StorageService, EvidenceService, DocumentUpload, Dropzone+WebCrypto, mTLS Nginx config, deploy scripts |
 | [1.2.1](./CHANGELOG.md#121---2026-07-14) | 2026-07-14 | Pre-alpha | Security audit: 12 corrections (crypto, integrity, race conditions, secrets), 178 tests |

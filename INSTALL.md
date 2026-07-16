@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.5.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.6.0 | **Last Updated:** 2026-07-16
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -181,6 +181,8 @@ php spark migrate:status
 | App                 | 2026-07-14-400000_AddShieldUserIdToUsers    | migrated   |
 | App                 | 2026-07-14-500000_CreateNotificationReque.. | migrated   |
 | App                 | 2026-07-14-600000_CreateGlobalMessagingAc.. | migrated   |
+| App                 | 2026-07-14-700000_CreateSettingsTable        | migrated   |
+| App                 | 2026-07-14-700001_AddContextColumn           | migrated   |
 | Shield              | (auth tables)                               | migrated   |
 +---------------------+---------------------------------------------+------------+
 ```
@@ -225,6 +227,7 @@ mysql -u marachain_user -p marachain -e "SHOW TABLES;"
 | notification_requested      |
 | notifications               |
 | settings                    |
+| settings                    |
 | signature_requests          |
 | users                       |
 +-----------------------------+
@@ -250,7 +253,7 @@ php spark serve --port=8080
 ### 10. Run Tests
 
 ```bash
-# Todos los tests (178 tests, 422 assertions)
+# Todos los tests (~220 tests, ~500 assertions)
 php vendor/bin/phpunit
 
 # Solo tests unitarios
@@ -525,7 +528,7 @@ nano .env                                    # Configurar MySQL + encryption.key
 php spark migrate
 php spark shield:setup                       # Configurar SHIELD auth
 php spark serve                              # http://localhost:8080
-php vendor/bin/phpunit                       # 178 tests
+php vendor/bin/phpunit                       # ~220 tests
 
 # ── Comandos utiles ──
 php spark list                               # Listar comandos

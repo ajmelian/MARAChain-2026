@@ -1,6 +1,6 @@
 # Security Policy
 
-> **Version:** 1.4.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.6.0 | **Last Updated:** 2026-07-16
 
 MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evidencias criptograficas. La seguridad es un requisito fundamental, no una caracteristica opcional.
 
@@ -10,11 +10,9 @@ MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evid
 
 | Version | Status | Security Support |
 |---------|--------|-----------------|
-| 1.4.0 (pre-alpha) | In Development | Not yet in production |
-| 1.2.1 (pre-alpha) | EOL (superseded by 1.4.0) | Not released |
-| 1.2.0 (pre-alpha) | EOL (superseded by 1.2.1) | Not released |
-| 1.1.1 (pre-alpha) | EOL (superseded) | Not released |
-| 1.0.0 (initial) | Archived | Not supported |
+| 1.6.0 (pre-alpha) | In Development | Not yet in production |
+| 1.5.0 (pre-alpha) | EOL (superseded by 1.6.0) | Not released |
+| 1.4.0 (pre-alpha) | EOL (superseded by 1.5.0) | Not released |
 
 Once in production, only the latest `MAJOR.MINOR` release will receive security patches.
 
@@ -155,7 +153,20 @@ El NIF/NIE se almacena con cifrado de doble capa:
 - `ssl_verify_depth 4` para validar cadena de certificacion FNMT completa
 - Configuracion documentada en `nginx-fnmt-mtls.conf`
 
-### 14. Atomic Database Operations
+### 15. API Authentication Filter (`api-auth`)
+
+- Filtro aplicado a TODAS las rutas API REST (`/users`, `/devices`, `/documents`, `/transfers`, `/signatures`, `/evidence`, `/ledger`, `/contacts`, `/notifications`)
+- Requiere sesion SHIELD activa con permisos de grupo adecuados (superadmin, admin, developer, user)
+- Previene acceso no autenticado a datos de usuarios, documentos, y evidencias
+- Rutas publicas: `/health` (health check), rutas web de auth sin sesion
+
+### 16. FNMT TOTP Rate Limiting
+
+- `throttle:auth` aplicado a `POST /auth/fnmt/totp-setup` y `POST /auth/fnmt/totp-verify`
+- Limite de 6 req/min para prevenir brute-force de codigos TOTP de 6 digitos
+- AP-3 del audit report v1.2.1 corregido
+
+### 17. Atomic Database Operations
 
 - `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico (evita TOCTOU)
 - `sealBlock()` envuelto en transaccion BD con rollback en fallo
@@ -167,7 +178,7 @@ El NIF/NIE se almacena con cifrado de doble capa:
 
 | # | Riesgo | Medida Implementada | Estado |
 |---|--------|---------------------|--------|
-| A01 | Broken Access Control | SHIELD session-based auth con grupos de permisos; rutas web protegidas con `session` filter | ✅ Implementado |
+| A01 | Broken Access Control | SHIELD session-based auth con grupos de permisos; rutas web protegidas con `session` filter; rutas API protegidas con `api-auth` filter | ✅ Implementado |
 | A02 | Cryptographic Failures | AES-256-GCM para NIF y TOTP, encryption.key en .env, sin hardcoding, HMAC para busqueda | ✅ Implementado |
 | A03 | Injection | Query Builder (prepared statements), validacion regex identica front/back, sin raw SQL | ✅ Implementado |
 | A04 | Insecure Design | SDD con OpenSpec, threat modeling (STRIDE/LINDDUN), ADR documentados, auditoria de seguridad (v1.2.1) | ✅ Implementado |

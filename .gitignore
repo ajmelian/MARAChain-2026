@@ -43,3 +43,4 @@ node_modules/
 .memory/
 .mcp.json
 .env.continue.local
+logs/

@@ -123,8 +123,8 @@
 
 ## Notas
 
-- **Estado actual**: 178 tests unitarios, 422 assertions. Cobertura limitada a modelos y controladores API básicos.
-- **Base de datos**: 14 migraciones, 19 tablas (MySQL development, SQLite testing).
+- **Estado actual**: ~220 tests unitarios, ~500 assertions. Nuevos tests de servicios (5) y controladores web (5) en v1.6.0.
+- **Base de datos**: 16 migraciones, 21 tablas (MySQL development, SQLite testing).
 - **Servicios**: 10 interfaces/servicios implementados. 3 son stubs (WhatsApp, Telegram, SMS).
 - **Deuda técnica conocida**: `freshEntity()` bypassing CI4 entity cache. `uuidV4()` ya centralizado en helper.
 - **Deuda de auditoría anterior**: 14 observaciones especulativas pendientes documentadas en `AUDIT_REPORT.md`.

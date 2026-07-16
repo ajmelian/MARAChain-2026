@@ -1,6 +1,6 @@
 # Configuration Guide
 
-> **Version:** 1.5.0 | **Last Updated:** 2026-07-14
+> **Version:** 1.6.0 | **Last Updated:** 2026-07-16
 
 This document describes all configuration options for the MARAChain application.
 
@@ -253,8 +253,9 @@ Configuracion de almacenamiento de settings SHIELD. Usa base de datos por defect
 | `invalidchars` | `InvalidChars::class` | Security |
 | `secureheaders` | `SecureHeaders::class` | Security (CI4 built-in) |
 | `security` | `App\Filters\SecurityHeaders::class` | Security (MARAChain custom) |
+| `api-auth` | `CodeIgniter\Shield\Filters\SessionAuth::class` | Auth (API protection) |
 | `throttle` | `App\Filters\Throttle::class` | Rate Limiting (MARAChain custom) |
-| `session` | `CodeIgniter\Shield\Filters\SessionAuth::class` | Auth (SHIELD) |
+| `session` | `CodeIgniter\Shield\Filters\SessionAuth::class` | Auth (SHIELD web) |
 | `cors` | `Cors::class` | Security |
 | `forcehttps` | `ForceHTTPS::class` | Security |
 | `pagecache` | `PageCache::class` | Performance |
@@ -305,30 +306,29 @@ $routes->group('', ['filter' => 'throttle:auth'], function($routes) {
 
 ### `app/Config/Routes.php`
 
-60+ total routes defined (37+ API REST + 20+ Web/Auth + 1 health + 1 home):
+70+ total routes defined (37+ API REST + 1 health + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 1 home):
 
-| Group | Routes | Methods |
-|-------|--------|---------|
-| `/` (Home) | 1 | GET |
-| `/health` | 1 | GET |
-| **Auth (SHIELD)** | 5 | GET, POST |
-| `/users` | 6 | GET, POST, PUT, DELETE |
-| `/devices` | 4 | GET, POST, DELETE |
-| `/documents` | 6 | GET, POST, DELETE |
-| `/transfers` | 8 | GET, POST |
-| `/signatures` | 2 | GET, POST |
-| `/evidence` | 2 | GET |
-| `/ledger` | 3 | GET |
-| `/contacts` | 5 | GET, POST, PUT, DELETE |
-| `/notifications` | 2 | GET |
-| **Web (session-protected)** | 10 | GET, POST, PUT, DELETE |
-| **FNMT Auth** | 3 | GET, POST |
+| Group | Routes | Methods | Filter |
+|-------|--------|---------|--------|
+| `/` (Home) | 1 | GET | - |
+| `/health` | 1 | GET | - (public) |
+| **Auth (SHIELD)** | 5 | GET, POST | `throttle:auth` |
+| **FNMT Auth** | 5 | GET, POST | `throttle:auth` (POST routes) |
+| **API (api-auth)** | 37+ | GET, POST, PUT, DELETE | `api-auth` |
+| `/users` | 6 | GET, POST, PUT, DELETE | `api-auth` |
+| `/devices` | 4 | GET, POST, DELETE | `api-auth` |
+| `/documents` | 6 | GET, POST, DELETE | `api-auth` |
+| `/transfers` | 8 | GET, POST | `api-auth` |
+| `/signatures` | 2 | GET, POST | `api-auth` |
+| `/evidence` | 2 | GET | `api-auth` |
+| `/ledger` | 3 | GET | `api-auth` |
+| `/contacts` | 5 | GET, POST, PUT, DELETE | `api-auth` |
+| `/notifications` | 2 | GET | `api-auth` |
+| **Web (session)** | 18 | GET, POST, PUT, DELETE | `session` |
 
-**Route group feature**: `users`, `devices`, `documents`, `transfers`, `signatures`
-
-**Web routes** protected with `session` filter (SHIELD).
-
-**Auth routes** protected with `throttle:auth` filter (rate limiting).
+**API routes** protegidas con `api-auth` filter (SHIELD SessionAuth).  
+**Auth/FNMT POST routes** protegidas con `throttle:auth` filter (rate limiting).  
+**Web routes** protegidas con `session` filter (SHIELD).
 
 **Literal routes before wildcards**: `/transfers/sent`, `/transfers/received`, `/ledger/verify` are defined before `(:segment)` captures.
 
@@ -529,6 +529,11 @@ php spark notifications:send --retry-dead
 | WhatsApp notification provider | Stub | 1.5.0 |
 | Telegram notification provider | Stub | 1.5.0 |
 | SMS notification provider | Stub | 1.5.0 |
+| SHIELD Settings table (DB-backed) | Active | 1.6.0 |
+| Context column for settings segregation | Active | 1.6.0 |
+| api-auth filter (API route protection) | Active | 1.6.0 |
+| FNMT TOTP rate limiting | Active | 1.6.0 |
+| NotificationRequestedModel (outbox model) | Active | 1.6.0 |
 | IPFS integration | Planned | - |
 | Blockchain anchoring (external DLT) | Planned | - |
 | Playwright E2E tests | Planned | - |

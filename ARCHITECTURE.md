@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.5.0 | **Date:** 2026-07-14 | **Status:** MVP (Pre-alpha)
+> **Version:** 1.6.0 | **Date:** 2026-07-16 | **Status:** MVP (Pre-alpha)
 
 ## Overview
 
@@ -68,7 +68,7 @@ Domain → sin dependencia de framework
 │  ┌────────────────┐           │            ┌──────────────────┐         │
 │  │   Validation   │           │            │   Migrations     │         │
 │  │   9 groups +   │           │            │  (CI4 Forge)     │         │
-│  │   CustomRules  │           │            │  10 migrations   │         │
+│  │   CustomRules  │           │            │  16 migrations   │         │
 │  └────────────────┘           │            └────────┬─────────┘         │
 │                               │                     │                   │
 │           ┌───────────────────┼─────────────────────┼───────────┐      │
@@ -247,7 +247,8 @@ wwwroot/
 │   │   ├── EvidenceModel.php          # append-only, aggregate queries
 │   │   ├── LedgerBlockModel.php       # createBlock, chain integrity
 │   │   ├── ContactModel.php           # CRUD + search
-│   │   └── NotificationModel.php      # outbox pattern, retry logic (atomic)
+│   │   ├── NotificationModel.php      # outbox pattern, retry logic (atomic)
+│   │   └── NotificationRequestedModel.php # transactional outbox, states, circuit breaker
 │   ├── Notifications/
 │   │   ├── NotificationChannel.php             # Enum PHP: EMAIL, WHATSAPP, TELEGRAM, SMS
 │   │   ├── NotificationProviderInterface.php   # Contrato send()/health()
@@ -405,29 +406,42 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 
 ### REST Endpoints (desde `Routes.php`)
 
+> **Nota:** Todas las rutas API REST estan protegidas con el filtro `api-auth` (requiere sesion SHIELD activa).
+
 | Metodo | Ruta | Controlador | Descripcion |
 |--------|------|-------------|-------------|
 | GET | `/` | `Home::index` | Welcome page |
-| **Users** | | | |
+| GET | `/health` | `HealthController::index` | Health check (publico, rate-limited implícito) |
+| **Auth (Web — rate-limited via throttle:auth)** | | | |
+| GET | `/login` | `Web\AuthController::login` | Login form |
+| POST | `/login` | `Web\AuthController::login` | Process login |
+| GET | `/register` | `Web\AuthController::register` | Register form |
+| POST | `/register` | `Web\AuthController::register` | Process registration |
+| GET/POST | `/logout` | `Web\AuthController::logout` | Logout |
+| **FNMT Auth (Web — TOTP routes rate-limited)** | | | |
+| GET | `/auth/fnmt` | `Web\FnmtController::login` | Login con certificado FNMT (mTLS) |
+| GET/POST | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP (POST con throttle:auth) |
+| GET/POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP (POST con throttle:auth) |
+| **Users (api-auth)** | | | |
 | GET | `/users` | `UserController::index` | Listar usuarios |
 | GET | `/users/{id}` | `UserController::show` | Ver usuario |
 | POST | `/users` | `UserController::create` | Crear usuario |
 | PUT | `/users/{id}` | `UserController::update` | Actualizar usuario |
 | DELETE | `/users/{id}` | `UserController::delete` | Bloquear usuario |
 | POST | `/users/{id}/totp` | `UserController::enableTotp` | Activar TOTP |
-| **Devices** | | | |
+| **Devices (api-auth)** | | | |
 | GET | `/devices` | `DeviceController::index` | Listar dispositivos |
 | GET | `/devices/{id}` | `DeviceController::show` | Ver dispositivo |
 | POST | `/devices` | `DeviceController::register` | Registrar dispositivo |
 | DELETE | `/devices/{id}` | `DeviceController::revoke` | Revocar dispositivo |
-| **Documents** | | | |
+| **Documents (api-auth)** | | | |
 | GET | `/documents` | `DocumentController::index` | Listar documentos |
 | GET | `/documents/{id}` | `DocumentController::show` | Ver documento |
 | POST | `/documents` | `DocumentController::create` | Crear documento |
 | POST | `/documents/upload` | `DocumentUploadController::upload` | Subir documento cifrado (envelope) |
 | POST | `/documents/{id}/seal` | `DocumentController::seal` | Sellar documento |
 | DELETE | `/documents/{id}` | `DocumentController::delete` | Eliminar documento |
-| **Transfers** | | | |
+| **Transfers (api-auth)** | | | |
 | GET | `/transfers` | `TransferController::index` | Listar transferencias |
 | GET | `/transfers/sent` | `TransferController::outbox` | Bandeja de salida |
 | GET | `/transfers/received` | `TransferController::inbox` | Bandeja de entrada |
@@ -436,47 +450,42 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | POST | `/transfers/{id}/accept` | `TransferController::accept` | Aceptar transferencia |
 | POST | `/transfers/{id}/reject` | `TransferController::reject` | Rechazar transferencia |
 | POST | `/transfers/{id}/revoke` | `TransferController::revoke` | Revocar transferencia |
-| **Signatures** | | | |
+| **Signatures (api-auth)** | | | |
 | POST | `/signatures` | `SignatureController::request` | Solicitar firma |
 | GET | `/signatures/{id}` | `SignatureController::show` | Ver solicitud de firma |
-| **Evidence** | | | |
+| **Evidence (api-auth)** | | | |
 | GET | `/evidence` | `EvidenceController::index` | Listar evidencias |
 | GET | `/evidence/{id}` | `EvidenceController::show` | Ver evidencia |
-| **Ledger** | | | |
+| **Ledger (api-auth)** | | | |
 | GET | `/ledger` | `LedgerController::index` | Listar bloques |
 | GET | `/ledger/verify` | `LedgerController::verify` | Verificar integridad |
 | GET | `/ledger/{id}` | `LedgerController::show` | Ver bloque |
-| **Contacts** | | | |
+| **Contacts (api-auth)** | | | |
 | GET | `/contacts` | `ContactController::index` | Listar contactos |
 | POST | `/contacts` | `ContactController::create` | Crear contacto |
 | GET | `/contacts/{id}` | `ContactController::show` | Ver contacto |
 | PUT | `/contacts/{id}` | `ContactController::update` | Actualizar contacto |
 | DELETE | `/contacts/{id}` | `ContactController::delete` | Eliminar contacto |
-| **Notifications** | | | |
-| GET | `/health` | `HealthController::index` | Health check endpoint |
-| **Auth (Web)** | | | |
-| GET | `/login` | `Web\AuthController::login` | Login form |
-| POST | `/login` | `Web\AuthController::loginAction` | Process login |
-| GET | `/register` | `Web\AuthController::register` | Register form |
-| POST | `/register` | `Web\AuthController::registerAction` | Process registration |
-| GET/POST | `/logout` | `Web\AuthController::logout` | Logout |
-| **Transfers (Web)** | | | |
+| **Notifications (api-auth)** | | | |
+| GET | `/notifications` | `NotificationController::index` | Listar notificaciones |
+| GET | `/notifications/{id}` | `NotificationController::show` | Ver notificacion |
+| **Transfers (Web — session-protected)** | | | |
 | GET | `/inbox` | `Web\TransfersController::inbox` | Bandeja de entrada |
 | GET | `/outbox` | `Web\TransfersController::outbox` | Bandeja de salida |
-| GET | `/transfers/new` | `Web\TransfersController::create` | Nueva transferencia |
-| POST | `/transfers/new` | `Web\TransfersController::store` | Crear transferencia |
-| **Contacts (Web)** | | | |
+| GET | `/transfers/new` | `Web\TransfersController::new` | Nueva transferencia |
+| POST | `/transfers/{id}/accept` | `Web\TransfersController::accept` | Aceptar transferencia |
+| POST | `/transfers/{id}/reject` | `Web\TransfersController::reject` | Rechazar transferencia |
+| **Contacts (Web — session-protected)** | | | |
 | GET | `/web/contacts` | `Web\ContactsController::index` | Listar contactos |
 | POST | `/web/contacts` | `Web\ContactsController::store` | Crear contacto |
-| GET/PUT/DELETE | `/web/contacts/{id}` | `Web\ContactsController` | Ver/editar/eliminar |
-| **Profile (Web)** | | | |
+| GET | `/web/contacts/{id}` | `Web\ContactsController::edit` | Editar contacto |
+| PUT | `/web/contacts/{id}` | `Web\ContactsController::update` | Actualizar contacto |
+| DELETE | `/web/contacts/{id}` | `Web\ContactsController::delete` | Eliminar contacto |
+| **Profile (Web — session-protected)** | | | |
 | GET | `/profile` | `Web\ProfileController::index` | Perfil de usuario |
-| **FNMT Auth (Web)** | | | |
-| GET | `/auth/fnmt/init` | `Web\FnmtController::init` | Iniciar autenticacion FNMT |
-| GET | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP |
-| POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP |
+| GET | `/totp/setup` | `Web\AuthController::totpSetup` | Configurar TOTP |
 
-**Total: 60+ rutas registradas (37+ REST API + 1 health + 20+ Web/Auth + 1 home + 1 ledger/verify)**
+**Total: 70+ rutas registradas (37+ REST API + 1 health + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 1 home)**
 
 ## Database
 
@@ -497,6 +506,8 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | 11 | `users.shield_user_id` | FK → `shield_users.id` | `2026-07-14-400000` |
 | 12 | `notification_requested` | Outbox transaccional de notificaciones | `2026-07-14-500000` |
 | 13 | `global_messaging_accounts` | Cuentas globales por canal | `2026-07-14-600000` |
+| 14 | `settings` | Configuracion SHIELD (class/key/value) | `2026-07-14-700000` |
+| 15 | `settings.context` | Columna de segregacion staging/prod | `2026-07-14-700001` |
 
 ### Caracteristicas del esquema
 
@@ -511,6 +522,7 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 ## Security Architecture
 
 - **SHIELD**: autenticacion session-based, autorizacion por grupos, proteccion CSRF
+- **api-auth filter**: filtro aplicado a todas las rutas API REST (users, devices, documents, transfers, signatures, evidence, ledger, contacts, notifications). Requiere sesion SHIELD activa con permisos de grupo.
 - **SecurityHeaders**: filtro global `after` que aplica 7 cabeceras OWASP
 - **Throttle**: rate limiting configurable (token bucket basado en archivos)
 - **forcehttps**: filtro global `before` (redireccion HTTP → HTTPS)
@@ -524,6 +536,7 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 - **Frontera de confianza**: `$this->request->getServer()` en lugar de `$_SERVER` (previene inyeccion de cabeceras SSL)
 - **Sin clave maestra**: modelo _only-4-your-eyes_
 - **Sin hardcoding de secretos**: variables `encryption.key` y `encryption.hmacKey` solo desde `.env`
+- **Settings table**: configuracion SHIELD persistida en BD con segregacion por `context` (staging/prod)
 
 ## Testing
 
@@ -536,12 +549,13 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 
 ### Suite actual
 
-- **178 tests** en 22 ficheros de test
-- **422 assertions**
+- **~220 tests** en 35 ficheros de test
+- **~500 assertions**
 - **9 model test files** en `tests/Unit/Models/`
-- **9 controller test files** en `tests/Unit/Controllers/`
-- **1 service test file** (`LedgerServiceTest`) en `tests/Unit/Services/` (14 tests)
+- **15 controller test files** en `tests/Unit/Controllers/`
+- **5 service test files** en `tests/Unit/Services/` (LedgerService, StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService)
 - **2 health tests** en `tests/unit/`
+- **3 session/database/support tests**
 - **Database tests**: `tests/database/ExampleDatabaseTest.php`
 
 ### Tests de integridad del Ledger (14 tests en LedgerServiceTest)

@@ -14,11 +14,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IPFS private cluster storage integration
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
-- API authentication (JWT/API keys for REST endpoints)
+- JWT/API keys for REST API authentication
 - CSRF protection on all web forms (AP-1 from audit)
 - Session fixation fix in FNMT flow (AP-2 from audit)
-- Rate limiting on TOTP routes (AP-3 from audit)
 - Replace inline PHP template strings with view files (AP-4 from audit)
+
+---
+
+## [1.6.0] - 2026-07-16
+
+### Added
+- **Settings table migration** (`2026-07-14-700000_CreateSettingsTable.php`): tabla `settings` para almacenamiento de configuracion SHIELD en base de datos. Soporta pares `class`/`key`/`value` con tipos (`string`, `int`, `bool`, `array`, `json`).
+- **Context column migration** (`2026-07-14-700001_AddContextColumn.php`): anade columna `context` (varchar 255) a la tabla `settings` para segregacion de configuracion por entorno/aplicacion.
+- **NotificationRequestedModel** (`app/Models/NotificationRequestedModel.php`): modelo de persistencia para el outbox transaccional `notification_requested`. Gestiona estados `QUEUED`, `PROCESSING`, `SENT`, `FAILED`, `DEAD_LETTER` con idempotencia via `idempotency_key`. Soporte para reintentos con exponential backoff y circuit breaker.
+- **`api-auth` filter**: nuevo filtro de autorizacion aplicado a todas las rutas API REST (`/users`, `/devices`, `/documents`, `/transfers`, `/signatures`, `/evidence`, `/ledger`, `/contacts`, `/notifications`). Las rutas API ahora requieren sesion SHIELD activa con permisos de grupo.
+- **Rate limiting en rutas FNMT TOTP**: `throttle:auth` aplicado a `auth/fnmt/totp-setup` (POST) y `auth/fnmt/totp-verify` (POST). Corrige AP-3 del audit report (brute-force de codigos TOTP de 6 digitos).
+- **Nueva ruta**: `GET /totp/setup` (web, session-protected) para configuracion de TOTP desde la interfaz web.
+- **Nuevos tests de servicios**: `StorageServiceTest`, `FnmtIdentityProviderTest`, `EvidenceServiceTest`, `X509ServiceTest`, `EncryptionServiceTest` (5 nuevos archivos de test, ~40 tests adicionales).
+- **Nuevos tests de controladores web**: `AuthControllerTest`, `ContactsWebTest`, `TransfersWebTest`, `HealthControllerTest`, `LedgerControllerApiTest` (5 nuevos archivos de test).
+
+### Changed
+- **Rutas API protegidas**: todas las rutas REST ahora estan dentro del grupo `api-auth` en lugar de ser publicas. Requiere sesion SHIELD con permisos adecuados (superadmin, admin, developer, o user).
+- **`Routes.php` reorganizado**: estructura clara con secciones: Health, Auth (rate-limited), Web (session-protected), API (api-auth).
+- **Totales actualizados**: 16 migraciones (antes 14), 10 modelos (antes 9), +10 archivos de test (35 total).
+- Migraciones 700000 y 700001 se ejecutan automaticamente tras `php spark shield:setup`.
+
+### Security
+- **api-auth filter**: acceso a endpoints REST requiere autenticacion SHIELD. Previene acceso no autenticado a datos de usuarios, documentos, y evidencias.
+- **FNMT TOTP rate limiting**: protege contra brute-force de codigos TOTP con limite de 6 req/min (AP-3 corregido).
+- **Settings table**: configuracion SHIELD persistida en BD en lugar de archivos, con soporte para `context` (segregacion staging/prod).
 
 ---
 

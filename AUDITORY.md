@@ -6,6 +6,7 @@
 
 | Date | Version | Auditor | Scope | Findings | Status |
 |------|---------|---------|-------|----------|--------|
+| 2026-07-16 | 1.5.0 → 1.6.0 | Internal | Settings table, context column, api-auth filter, NotificationRequestedModel, new tests | 2 migrations + 1 model + 1 filter + 10 test files: SHIELD settings DB-backed, API routes protected, FNMT TOTP rate-limited (AP-3 fixed) | **Completada** |
 | 2026-07-14 | 1.4.0 → 1.5.0 | Internal | Sistema de notificaciones: 14 archivos (Notifications/, Commands/, Migrations/) | Notifications system integrated: multi-channel outbox, Provider Pattern, global accounts, stubs for future channels | **Completada** |
 | 2026-07-14 | 1.2.0 → 1.4.0 | Internal | 33 archivos + 10 nuevos: controladores, servicios, migrations, deploy scripts | 16 defectos (12 corregidos, 4 pendientes), MVP features integrados | **Completada** |
 
@@ -164,4 +165,69 @@ SQLite (dev) / MySQL (prod) / 6 servicios / 9 modelos / 16 controladores
 
 - CHANGELOG: [CHANGELOG.md#150---2026-07-14](./CHANGELOG.md#150---2026-07-14)
 - Diseno de notificaciones: [docs/07_NOTIFICATIONS.md](./docs/07_NOTIFICATIONS.md)
+- Version: [VERSION.md](./VERSION.md)
+
+---
+
+## v1.6.0 — Settings, api-auth & Notification Model Audit (2026-07-16)
+
+### Alcance
+
+- **Archivos revisados**: 12 nuevos/modificados en `app/Database/Migrations/`, `app/Models/`, `app/Config/`, `tests/`
+- **Capas auditadas**: Migrations (2), Models (1), Config/Filters (1), Tests (10)
+
+### Componentes implementados
+
+| Fecha | Componente | Descripcion | Tipo |
+|-------|-----------|-------------|------|
+| 2026-07-16 | `CreateSettingsTable` | Migracion: tabla `settings` para configuracion SHIELD en BD | Migration |
+| 2026-07-16 | `AddContextColumn` | Migracion: columna `context` para segregacion staging/prod | Migration |
+| 2026-07-16 | `NotificationRequestedModel` | Modelo: outbox transaccional con estados, idempotencia, circuit breaker | Model |
+| 2026-07-16 | `api-auth` filter | Filtro: protege TODAS las rutas API REST con SHIELD SessionAuth | Filter |
+| 2026-07-16 | `Routes.php` (reorg) | Reorganizacion: grupos Health, Auth (rate-limited), Web (session), API (api-auth) | Config |
+| 2026-07-16 | Service tests ×5 | StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService | Test |
+| 2026-07-16 | Web tests ×5 | AuthController, ContactsWeb, TransfersWeb, HealthController, LedgerControllerApi | Test |
+
+### Correcciones de seguridad aplicadas
+
+| ID | Categoria | Descripcion | Origen |
+|----|-----------|-------------|--------|
+| AP-3 | Rate limiting | `throttle:auth` aplicado a rutas FNMT TOTP (POST totp-setup, POST totp-verify) | Audit v1.2.1 |
+
+### Cambios en API
+
+- **Breaking change conceptual**: rutas REST ahora requieren sesion SHIELD (`api-auth` filter). Clientes API deben enviar cookie de sesion.
+- Health endpoint (`/health`) permanece publico sin autenticacion.
+- Rutas FNMT TOTP ahora rate-limited (6 req/min).
+
+### Totales actualizados
+
+```text
+Migraciones: 14 → 16 (nuevas: settings table, context column)
+Modelos:     9 → 10 (nuevo: NotificationRequestedModel)
+Tests:       178/422 → ~220/~500 (nuevos: 5 service + 5 web controller tests)
+Archivos test: 22 → 35
+```
+
+### Archivos nuevos
+
+| Fichero | Descripcion |
+|---------|-------------|
+| `app/Database/Migrations/2026-07-14-700000_CreateSettingsTable.php` | SHIELD Settings DB table |
+| `app/Database/Migrations/2026-07-14-700001_AddContextColumn.php` | Settings context column |
+| `app/Models/NotificationRequestedModel.php` | Outbox persistence model |
+| `tests/Unit/Services/StorageServiceTest.php` | StorageService tests |
+| `tests/Unit/Services/FnmtIdentityProviderTest.php` | FNMT identity tests |
+| `tests/Unit/Services/EvidenceServiceTest.php` | Evidence recording tests |
+| `tests/Unit/Services/X509ServiceTest.php` | X.509 parsing tests |
+| `tests/Unit/Services/EncryptionServiceTest.php` | Encryption tests |
+| `tests/Unit/Controllers/AuthControllerTest.php` | Auth web tests |
+| `tests/Unit/Controllers/ContactsWebTest.php` | Contacts web tests |
+| `tests/Unit/Controllers/TransfersWebTest.php` | Transfers web tests |
+| `tests/Unit/Controllers/HealthControllerTest.php` | Health endpoint tests |
+| `tests/Unit/Controllers/LedgerControllerApiTest.php` | Ledger API tests |
+
+### Referencias
+
+- CHANGELOG: [CHANGELOG.md#160---2026-07-16](./CHANGELOG.md#160---2026-07-16)
 - Version: [VERSION.md](./VERSION.md)

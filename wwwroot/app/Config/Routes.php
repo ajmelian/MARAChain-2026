@@ -8,6 +8,9 @@ $routes->get('/', 'Home::index');
 // ── Health check (smoke test for deploy) ────────────────────────
 $routes->get('health', 'HealthController::index');
 
+// ── Stripe Webhook (no auth) ────────────────────────────────────
+$routes->post('stripe/webhook', 'PaymentsController::webhook');
+
 // ── API Documentation (Swagger UI) ──────
 $routes->get('api/docs', 'Api\DocsController::index');
 
@@ -125,5 +128,8 @@ $routes->group('', ['filter' => 'api-auth'], static function (RouteCollection $r
         $routes->get('(:segment)',     'SignatureController::show/$1');
         $routes->post('/',             'SignatureController::request');
     });
+
+    // ── Payments ────────────────────────────────────────────────
+    $routes->post('payments/checkout', 'PaymentsController::checkout');
 
 }); // end api-auth group

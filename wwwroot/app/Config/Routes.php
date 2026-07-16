@@ -62,6 +62,9 @@ $routes->group('', ['filter' => 'api-auth'], static function (RouteCollection $r
     $routes->get('ledger/verify', 'LedgerController::verify');
     $routes->get('ledger/(:segment)', 'LedgerController::show/$1');
 
+    // ── Timestamps ──────────────────────────────────────────────
+    $routes->get('timestamps/(:segment)/receipt', 'TimestampController::receipt/$1');
+
     // ── Contacts ────────────────────────────────────────────────
     $routes->get('contacts', 'ContactController::index');
     $routes->post('contacts', 'ContactController::create');

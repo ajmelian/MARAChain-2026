@@ -37,8 +37,8 @@ class LedgerGenesis extends BaseCommand
         CLI::write('Creating genesis block...', 'yellow');
 
         try {
-            $service = new LedgerService();
-            $block   = $service->createGenesisBlock($fingerprint);
+        $service = new LedgerService();
+        $block   = $service->createGenesisBlock();
 
             CLI::write('Genesis block created successfully!', 'green');
             CLI::write("  Block UUID: {$block->id}");

@@ -27,10 +27,88 @@ class LedgerService
 
     private EvidenceModel $evidenceModel;
 
-    public function __construct()
+    private string $keystorePath;
+
+    private ?string $signingSeed = null;
+
+    private ?string $signingPublicKey = null;
+
+    public function __construct(?string $keystorePath = null)
     {
         $this->ledgerBlockModel = model(LedgerBlockModel::class);
         $this->evidenceModel    = model(EvidenceModel::class);
+        $this->keystorePath     = $keystorePath ?? '/etc/marachain/keystore';
+    }
+
+    /**
+     * Load or generate the Ed25519 signing key.
+     *
+     * Private key seed is stored in /etc/marachain/keystore/ledger.key.
+     * If the file does not exist, a new key is generated and stored.
+     * In testing/development, falls back to an in-memory key.
+     *
+     * @return string Ed25519 public key (hex-encoded, 64 chars)
+     *
+     * @throws RuntimeException If sodium is not available
+     *
+     * @since 1.9.0
+     */
+    public function loadSigningKey(): string
+    {
+        $keyFile = rtrim($this->keystorePath, '/') . '/ledger.key';
+
+        if (is_file($keyFile)) {
+            $seed = file_get_contents($keyFile);
+        } elseif (ENVIRONMENT === 'testing') {
+            if ($this->signingSeed === null) {
+                $seed = random_bytes(32);
+            } else {
+                $seed = $this->signingSeed;
+            }
+        } elseif ($this->signingSeed !== null) {
+            $seed = $this->signingSeed;
+        } else {
+            $seed = random_bytes(32);
+            $dir  = dirname($keyFile);
+            if (is_dir($dir) && is_writable($dir)) {
+                file_put_contents($keyFile, $seed, LOCK_EX);
+            }
+        }
+
+        $keyPair = sodium_crypto_sign_seed_keypair($seed);
+        $this->signingSeed      = $seed;
+        $this->signingPublicKey = sodium_bin2hex(
+            sodium_crypto_sign_publickey($keyPair)
+        );
+
+        return $this->signingPublicKey;
+    }
+
+    /**
+     * Sign a block hash with Ed25519.
+     *
+     * Uses sodium_crypto_sign_detached() for Ed25519 signatures.
+     * The signing key must be loaded before calling this method.
+     *
+     * @param string $blockHash SHA-256 block hash (64 hex chars)
+     *
+     * @return string Base64-encoded Ed25519 signature
+     *
+     * @throws RuntimeException If signing key is not loaded
+     *
+     * @since 1.9.0
+     */
+    private function signBlock(string $blockHash): string
+    {
+        if ($this->signingSeed === null) {
+            $this->loadSigningKey();
+        }
+
+        $keyPair = sodium_crypto_sign_seed_keypair($this->signingSeed);
+        $secretKey = sodium_crypto_sign_secretkey($keyPair);
+        $signature = sodium_crypto_sign_detached($blockHash, $secretKey);
+
+        return base64_encode($signature);
     }
 
     // ═════════════════════════════════════════════════════════════════
@@ -103,7 +181,7 @@ class LedgerService
      *
      * @since 1.4.0
      */
-    public function sealBlock(string $signingKeyFingerprint): ?array
+    public function sealBlock(): ?array
     {
         // ── Transaction: block insert + evidence updates are atomic ─
         $this->ledgerBlockModel->db->transStart();
@@ -162,7 +240,7 @@ class LedgerService
 
             $blockHash = hash('sha256', $blockData);
 
-            $blockSignature = $this->placeholderSign($blockHash, $signingKeyFingerprint);
+            $blockSignature = $this->signBlock($blockHash);
 
             $block = $this->ledgerBlockModel->createBlock([
                 'blockNumber'          => $blockNumber,
@@ -174,7 +252,7 @@ class LedgerService
                 'previousBlockHash'    => $previousHash,
                 'blockHash'            => $blockHash,
                 'blockSignature'       => $blockSignature,
-                'signingKeyFingerprint' => $signingKeyFingerprint,
+                'signingKeyFingerprint' => $this->signingPublicKey,
                 'sealedAt'             => $now,
             ]);
 
@@ -351,7 +429,7 @@ class LedgerService
      *
      * @since 1.4.0
      */
-    public function createGenesisBlock(string $signingKeyFingerprint): \App\Entities\LedgerBlock
+    public function createGenesisBlock(): \App\Entities\LedgerBlock
     {
         $existing = $this->ledgerBlockModel->findByBlockNumber(1);
 
@@ -383,7 +461,7 @@ class LedgerService
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $blockHash      = hash('sha256', $blockData);
-        $blockSignature = $this->placeholderSign($blockHash, $signingKeyFingerprint);
+        $blockSignature = $this->signBlock($blockHash);
 
         $block = $this->ledgerBlockModel->createBlock([
             'blockNumber'           => 1,
@@ -395,7 +473,7 @@ class LedgerService
             'previousBlockHash'     => null,
             'blockHash'             => $blockHash,
             'blockSignature'        => $blockSignature,
-            'signingKeyFingerprint' => $signingKeyFingerprint,
+                'signingKeyFingerprint' => $this->signingPublicKey,
             'sealedAt'              => $now,
         ]);
 
@@ -405,24 +483,6 @@ class LedgerService
     // ═════════════════════════════════════════════════════════════════
     //  Helpers
     // ═════════════════════════════════════════════════════════════════
-
-    /**
-     * Placeholder signature for MVP (pre-Ed25519).
-     *
-     * In production this will use Ed25519 signing. For now it produces
-     * a deterministic HMAC-SHA256 over the block hash and signing key.
-     *
-     * @param string $blockHash            Block hash to sign
-     * @param string $signingKeyFingerprint Signing key fingerprint
-     *
-     * @return string Base64-encoded placeholder signature
-     *
-     * @since 1.4.0
-     */
-    private function placeholderSign(string $blockHash, string $signingKeyFingerprint): string
-    {
-        return base64_encode(hash_hmac('sha256', $blockHash, $signingKeyFingerprint, true));
-    }
 
     /**
      * Convert a hex string to raw binary.

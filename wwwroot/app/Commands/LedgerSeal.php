@@ -37,7 +37,7 @@ class LedgerSeal extends BaseCommand
         CLI::write('Sealing new ledger block...', 'yellow');
 
         $service = new LedgerService();
-        $result  = $service->sealBlock($fingerprint);
+        $result  = $service->sealBlock();
 
         if ($result === null) {
             CLI::write('No pending evidence to seal.', 'yellow');

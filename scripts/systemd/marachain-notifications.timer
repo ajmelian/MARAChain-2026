@@ -1,0 +1,10 @@
+[Unit]
+Description=MARAChain Worker Scheduler — runs one-shot workers on a timer
+Documentation=https://marachain.local/docs
+
+[Timer]
+OnCalendar=minutely
+Unit=marachain-notifications.service
+
+[Install]
+WantedBy=timers.target

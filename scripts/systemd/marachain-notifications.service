@@ -1,0 +1,20 @@
+[Unit]
+Description=MARAChain Notification Worker — processes email outbox
+Documentation=https://marachain.local/docs
+After=mysql.service network.target
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/prod/current
+ExecStart=/usr/bin/php spark notifications:send
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=marachain-notifications
+
+[Install]
+WantedBy=multi-user.target

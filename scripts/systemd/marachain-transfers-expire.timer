@@ -1,0 +1,10 @@
+[Unit]
+Description=MARAChain Transfer Expiration Schedule — runs every 5 minutes
+Documentation=https://marachain.local/docs
+
+[Timer]
+OnCalendar=*:0/5
+Unit=marachain-transfers-expire.service
+
+[Install]
+WantedBy=timers.target

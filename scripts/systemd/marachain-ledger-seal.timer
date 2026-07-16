@@ -1,0 +1,10 @@
+[Unit]
+Description=MARAChain Ledger Seal Schedule — runs every 15 minutes
+Documentation=https://marachain.local/docs
+
+[Timer]
+OnCalendar=*:0/15
+Unit=marachain-ledger-seal.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=MARAChain Ledger Sealer — seals pending evidence into blocks
+Documentation=https://marachain.local/docs
+After=mysql.service network.target
+Wants=mysql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/prod/current
+ExecStart=/usr/bin/php spark ledger:seal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=marachain-ledger
+
+[Install]
+WantedBy=multi-user.target

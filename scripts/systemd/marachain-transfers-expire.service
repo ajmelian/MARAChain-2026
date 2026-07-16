@@ -1,0 +1,18 @@
+[Unit]
+Description=MARAChain Transfer Expiration — marks expired transfers
+Documentation=https://marachain.local/docs
+After=mysql.service network.target
+Wants=mysql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/prod/current
+ExecStart=/usr/bin/php spark transfers:expire
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=marachain-expire
+
+[Install]
+WantedBy=multi-user.target

@@ -31,7 +31,7 @@ $this->extend('layouts/main');
                     <h2>Nuevo env&iacute;o de documento</h2>
                 </div>
                 <div class="col-lg-7 col-md-7 col-sm-12">
-                    <ul class="breadcrumb float-md-right padding-0">
+                    <ul class="breadcrumb float-md-end padding-0">
                         <li class="breadcrumb-item"><a href="<?= base_url('/') ?>"><i class="zmdi zmdi-home"></i></a></li>
                         <li class="breadcrumb-item"><a href="<?= base_url('/transfers') ?>">Transferencias</a></li>
                         <li class="breadcrumb-item active">Nuevo env&iacute;o</li>
@@ -47,7 +47,7 @@ $this->extend('layouts/main');
                         <h2><strong>Nuevo env&iacute;o</strong> de documento</h2>
                         <ul class="header-dropdown">
                             <li class="dropdown">
-                                <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <a href="javascript:void(0);" class="dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     <i class="zmdi zmdi-more"></i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-right">
@@ -72,13 +72,13 @@ $this->extend('layouts/main');
                         <!-- ============================================
                              RECIPIENT SECTION
                              ============================================ -->
-                        <h5 class="m-t-0"><strong>Destinatario</strong></h5>
+                        <h5 class="mt-0"><strong>Destinatario</strong></h5>
                         <p class="text-muted">Seleccione el tipo de destinatario y complete los datos.</p>
 
                         <!-- Recipient type toggle -->
-                        <div class="form-group">
-                            <label class="m-r-20">Tipo de destinatario</label>
-                            <div class="radio inlineblock m-r-20">
+                        <div class="mb-3">
+                            <label class="me-5">Tipo de destinatario</label>
+                            <div class="radio inlineblock me-5">
                                 <input type="radio"
                                        name="recipient_type"
                                        id="recipient-physical"
@@ -101,7 +101,7 @@ $this->extend('layouts/main');
                         <div id="physical-fields">
                             <div class="row clearfix">
                                 <div class="col-lg-6 col-md-6 col-sm-12">
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         <label for="recipient-firstname">Nombre <span class="text-danger">*</span></label>
                                         <input type="text"
                                                class="form-control"
@@ -116,7 +116,7 @@ $this->extend('layouts/main');
                                     </div>
                                 </div>
                                 <div class="col-lg-6 col-md-6 col-sm-12">
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         <label for="recipient-lastname">Apellidos <span class="text-danger">*</span></label>
                                         <input type="text"
                                                class="form-control"
@@ -137,7 +137,7 @@ $this->extend('layouts/main');
                         <div id="legal-fields" style="display: none;">
                             <div class="row clearfix">
                                 <div class="col-lg-6 col-md-6 col-sm-12">
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         <label for="recipient-legalname">Raz&oacute;n social <span class="text-danger">*</span></label>
                                         <input type="text"
                                                class="form-control"
@@ -151,7 +151,7 @@ $this->extend('layouts/main');
                                     </div>
                                 </div>
                                 <div class="col-lg-6 col-md-6 col-sm-12">
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         <label for="recipient-attentionof">A la atenci&oacute;n de <span class="text-danger">*</span></label>
                                         <input type="text"
                                                class="form-control"
@@ -170,7 +170,7 @@ $this->extend('layouts/main');
                         <!-- Common fields -->
                         <div class="row clearfix">
                             <div class="col-lg-6 col-md-6 col-sm-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="recipient-email">Email <span class="text-danger">*</span></label>
                                     <input type="email"
                                            class="form-control"
@@ -185,7 +185,7 @@ $this->extend('layouts/main');
                                 </div>
                             </div>
                             <div class="col-lg-3 col-md-6 col-sm-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="recipient-phone">Tel&eacute;fono</label>
                                     <input type="tel"
                                            class="form-control"
@@ -199,7 +199,7 @@ $this->extend('layouts/main');
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="recipient-country">Pa&iacute;s <span class="text-danger">*</span></label>
                                     <select class="form-control"
                                             id="recipient-country"
@@ -235,7 +235,7 @@ $this->extend('layouts/main');
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="recipient-postalcode">C&oacute;digo postal</label>
                                     <input type="text"
                                            class="form-control"
@@ -260,7 +260,7 @@ $this->extend('layouts/main');
 
                         <div class="row clearfix">
                             <div class="col-lg-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="document-title">T&iacute;tulo <span class="text-danger">*</span></label>
                                     <input type="text"
                                            class="form-control"
@@ -274,7 +274,7 @@ $this->extend('layouts/main');
                                 </div>
                             </div>
                             <div class="col-lg-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="document-description">Descripci&oacute;n</label>
                                     <textarea class="form-control no-resize"
                                               id="document-description"
@@ -288,7 +288,7 @@ $this->extend('layouts/main');
                         </div>
 
                         <!-- Dropzone file upload -->
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label>Archivo PDF <span class="text-danger">*</span></label>
                              <div id="dropzone-area"
                                   class="dropzone"
@@ -297,7 +297,7 @@ $this->extend('layouts/main');
                                     <div class="drag-icon-cph">
                                         <i class="material-icons">touch_app</i>
                                     </div>
-                                    <h3 class="m-b-0">Arrastre el archivo aqu&iacute; o haga clic para seleccionar</h3>
+                                    <h3 class="mb-0">Arrastre el archivo aqu&iacute; o haga clic para seleccionar</h3>
                                     <em>(Solo archivos PDF. El documento no se env&iacute;a sin cifrar.)</em>
                                 </div>
                                 <div class="fallback">
@@ -307,7 +307,7 @@ $this->extend('layouts/main');
                             <div id="file-error" class="invalid-feedback" style="display: none;"></div>
                             <input type="hidden" id="file-uploaded" name="file_uploaded" value="0">
                             <input type="hidden" name="fileHash" id="file-hash" value="">
-                            <div class="alert alert-info m-t-10 m-b-0" role="alert">
+                            <div class="alert alert-info mt-3 mb-0" role="alert">
                                 <i class="zmdi zmdi-lock"></i>
                                 <strong>Seguridad:</strong> El documento no se env&iacute;a sin cifrar.
                                 Se cifra extremo a extremo antes de la transmisi&oacute;n.
@@ -324,7 +324,7 @@ $this->extend('layouts/main');
 
                         <div class="row clearfix">
                             <div class="col-lg-6 col-md-6 col-sm-12">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label for="security-level">Nivel de seguridad <span class="text-danger">*</span></label>
                                     <select class="form-control"
                                             id="security-level"
@@ -344,7 +344,7 @@ $this->extend('layouts/main');
                                 </div>
                             </div>
                             <div class="col-lg-6 col-md-6 col-sm-12">
-                                <div class="form-group m-t-30">
+                                <div class="mb-3 mt-5">
                                     <div class="checkbox">
                                         <input id="require-signature"
                                                type="checkbox"
@@ -364,7 +364,7 @@ $this->extend('layouts/main');
                         <hr>
 
                         <!-- Submit -->
-                        <div class="form-group m-b-0">
+                        <div class="mb-3">
                             <button type="submit"
                                     id="btn-submit"
                                     class="btn btn-primary btn-round waves-effect">
@@ -487,7 +487,7 @@ $this->extend('layouts/main');
 
         var value   = field.value ? field.value.trim() : '';
         var pattern = validators[name];
-        var feedback = field.closest('.form-group').querySelector('.invalid-feedback');
+        var feedback = field.closest('.mb-3').querySelector('.invalid-feedback');
         if (!feedback) return true;
 
         // Check required
@@ -563,7 +563,7 @@ $this->extend('layouts/main');
         // Document title
         var title = form.querySelector('[name="document_title"]');
         if (title && title.hasAttribute('required') && (!title.value || !title.value.trim())) {
-            var fb = title.closest('.form-group').querySelector('.invalid-feedback');
+            var fb = title.closest('.mb-3').querySelector('.invalid-feedback');
             var msg = title.getAttribute('data-error-required') || 'Obligatorio.';
             title.classList.add('is-invalid');
             if (fb) fb.textContent = msg;

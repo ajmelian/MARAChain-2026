@@ -1,0 +1,16 @@
+{
+  "name": "MARAChain",
+  "short_name": "MARAChain",
+  "description": "Plataforma de intercambio seguro de documentacion con firma electronica",
+  "start_url": "/inbox",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#673ab7",
+  "icons": [
+    {
+      "src": "/assets/images/logo.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml"
+    }
+  ]
+}

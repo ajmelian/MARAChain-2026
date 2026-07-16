@@ -13,22 +13,22 @@
     <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
         <div class="card">
             <div class="body">
-                <div class="text-center m-b-20">
+                <div class="text-center mb-5">
                     <img src="/assets/images/logo.svg" width="64" height="64" alt="MARAChain">
-                    <h4 class="m-t-20">MARAChain</h4>
+                    <h4 class="mt-5">MARAChain</h4>
                     <p class="text-muted">Crea tu cuenta para empezar</p>
                 </div>
 
                 <?php if (session('error') !== null) : ?>
                     <div class="alert alert-danger alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <?= esc(session('error')) ?>
                     </div>
                 <?php elseif (session('errors') !== null) : ?>
                     <div class="alert alert-danger alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <?php if (is_array(session('errors'))) : ?>
@@ -45,7 +45,7 @@
                     <?= csrf_field() ?>
 
                     <!-- Identity Type -->
-                    <div class="form-group mb-3">
+                    <div class="mb-3">
                         <label for="register-identity-type">Tipo de identidad</label>
                         <select class="form-control" id="register-identity-type" name="identity_type" required>
                             <option value="physical" <?= old('identity_type') === 'physical' ? 'selected' : '' ?>>
@@ -58,7 +58,7 @@
                     </div>
 
                     <!-- First Name / Legal Name (dynamic label via JS) -->
-                    <div class="form-group mb-3">
+                    <div class="mb-3">
                         <label for="register-first-name" id="label-first-name">Nombre</label>
                         <input type="text"
                                class="form-control"
@@ -75,7 +75,7 @@
                     </div>
 
                     <!-- Last Name (for physical persons) -->
-                    <div class="form-group mb-3" id="last-name-group">
+                    <div class="mb-3" id="last-name-group">
                         <label for="register-last-name">Apellidos</label>
                         <input type="text"
                                class="form-control"
@@ -87,7 +87,7 @@
                     </div>
 
                     <!-- Legal Name (for legal entities) -->
-                    <div class="form-group mb-3" id="legal-name-group" style="display:none;">
+                    <div class="mb-3" id="legal-name-group" style="display:none;">
                         <label for="register-legal-name">Raz&oacute;n social</label>
                         <input type="text"
                                class="form-control"
@@ -99,7 +99,7 @@
                     </div>
 
                     <!-- Email -->
-                    <div class="form-group mb-3">
+                    <div class="mb-3">
                         <label for="register-email">Correo electr&oacute;nico</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -122,7 +122,7 @@
                     </div>
 
                     <!-- Username (auto-generated from email) -->
-                    <div class="form-group mb-3">
+                    <div class="mb-3">
                         <label for="register-username">Nombre de usuario</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -147,7 +147,7 @@
                     </div>
 
                     <!-- Password -->
-                    <div class="form-group mb-3">
+                    <div class="mb-3">
                         <label for="register-password">Contrase&ntilde;a</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -168,7 +168,7 @@
                     </div>
 
                     <!-- Password Confirm -->
-                    <div class="form-group mb-4">
+                    <div class="mb-4">
                         <label for="register-password-confirm">Confirmar contrase&ntilde;a</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -193,7 +193,7 @@
                     </button>
                 </form>
 
-                <div class="text-center m-t-20">
+                <div class="text-center mt-5">
                     <p class="text-muted">
                         &iquest;Ya tienes cuenta?
                         <a href="<?= url_to('login') ?>">Iniciar sesi&oacute;n</a>

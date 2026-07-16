@@ -40,18 +40,18 @@ $statusLabels = [
 
 // ── Status badge color mapping ──
 $statusBadges = [
-    'PENDING_RECIPIENT' => 'badge-warning',
-    'READY'             => 'badge-info',
-    'SENDING'           => 'badge-info',
-    'SENT'              => 'badge-info',
-    'AVAILABLE'         => 'badge-success',
-    'ACCESSED'          => 'badge-primary',
-    'DOWNLOADED'        => 'badge-primary',
-    'ACCEPTED'          => 'badge-success',
-    'REJECTED'          => 'badge-danger',
-    'EXPIRED'           => 'badge-secondary',
-    'REVOKED'           => 'badge-secondary',
-    'FAILED'            => 'badge-danger',
+    'PENDING_RECIPIENT' => 'bg-warning text-dark',
+    'READY'             => 'bg-info text-dark',
+    'SENDING'           => 'bg-info text-dark',
+    'SENT'              => 'bg-info text-dark',
+    'AVAILABLE'         => 'bg-success',
+    'ACCESSED'          => 'bg-primary',
+    'DOWNLOADED'        => 'bg-primary',
+    'ACCEPTED'          => 'bg-success',
+    'REJECTED'          => 'bg-danger',
+    'EXPIRED'           => 'bg-secondary',
+    'REVOKED'           => 'bg-secondary',
+    'FAILED'            => 'bg-danger',
 ];
 
 $currentFilter = $statusFilter ?? null;
@@ -72,7 +72,7 @@ $filterParams  = [
             <h2>Bandeja de entrada</h2>
         </div>
         <div class="col-lg-7 col-md-7 col-sm-12">
-            <ul class="breadcrumb float-md-right padding-0">
+            <ul class="breadcrumb float-md-end padding-0">
                 <li class="breadcrumb-item"><a href="/"><i class="zmdi zmdi-home"></i></a></li>
                 <li class="breadcrumb-item"><a href="/transfers/inbox">Recibidos</a></li>
                 <li class="breadcrumb-item active">Lista</li>
@@ -96,7 +96,7 @@ $filterParams  = [
                             </span>
                         </div>
                     </div>
-                    <div class="col-md-6 text-right">
+                    <div class="col-md-6 text-end">
                         <a href="/transfers/new" class="btn btn-primary btn-round">
                             <i class="zmdi zmdi-plus"></i> Nuevo envio
                         </a>
@@ -118,7 +118,7 @@ $filterParams  = [
                                 $activeClass = $isActive ? 'btn-primary' : 'btn-default';
                                 ?>
                                 <li class="nav-item">
-                                    <a href="<?= $href ?>" class="btn <?= $activeClass ?> btn-sm m-r-5">
+                                    <a href="<?= $href ?>" class="btn <?= $activeClass ?> btn-sm me-5">
                                         <?= esc($filterLabel) ?>
                                     </a>
                                 </li>
@@ -139,9 +139,9 @@ $filterParams  = [
                     <!-- Empty State -->
                     <div class="text-center p-5">
                         <i class="zmdi zmdi-email-open" style="font-size: 64px; color: #ccc;"></i>
-                        <h4 class="m-t-20">No hay transferencias recibidas</h4>
+                        <h4 class="mt-5">No hay transferencias recibidas</h4>
                         <p class="text-muted">Cuando recibas documentos de otros usuarios, apareceran aqui.</p>
-                        <a href="/transfers/new" class="btn btn-primary btn-round m-t-10">
+                            <a href="/transfers/new" class="btn btn-primary btn-round mt-3">
                             <i class="zmdi zmdi-plus"></i> Enviar un documento
                         </a>
                     </div>
@@ -152,7 +152,7 @@ $filterParams  = [
                             <?php
                             /* @var DocumentTransfer $transfer */
                             $status     = $transfer->status;
-                            $badgeClass = $statusBadges[$status] ?? 'badge-secondary';
+                            $badgeClass = $statusBadges[$status] ?? 'bg-secondary';
                             $label      = $statusLabels[$status] ?? $status;
                             $createdAt  = $transfer->createdAt instanceof \CodeIgniter\I18n\Time
                                 ? $transfer->createdAt->humanize()
@@ -174,18 +174,18 @@ $filterParams  = [
                                         </span>
                                     </div>
                                     <div class="media-heading">
-                                        <span class="m-r-10"><?= esc($transfer->senderId) ?></span>
+                                        <span class="me-3"><?= esc($transfer->senderId) ?></span>
                                         <span class="badge <?= $badgeClass ?>"><?= esc($label) ?></span>
-                                        <small class="float-right text-muted"><?= $createdAt ?></small>
+                                        <small class="float-end text-muted"><?= $createdAt ?></small>
                                     </div>
                                     <p class="msg">
-                                        <span class="m-r-10">Documento:</span>
+                                        <span class="me-3">Documento:</span>
                                         <?= esc($transfer->documentId) ?>
                                     </p>
                                 </div>
                                 <?php if (in_array($status, ['ACCESSED', 'DOWNLOADED'], true)): ?>
-                                <div class="action-buttons d-flex align-items-center ml-3" onclick="event.stopPropagation();">
-                                    <form method="post" action="/transfers/<?= esc($transfer->id) ?>/accept" class="d-inline mr-1">
+                                <div class="action-buttons d-flex align-items-center ms-3" onclick="event.stopPropagation();">
+                                    <form method="post" action="/transfers/<?= esc($transfer->id) ?>/accept" class="d-inline me-1">
                                         <?= csrf_field() ?>
                                         <button type="submit" class="btn btn-sm btn-success" title="Aceptar">
                                             <i class="zmdi zmdi-check"></i>

@@ -30,7 +30,7 @@ $this->extend('layouts/main');
                     <h2>Contactos</h2>
                 </div>
                 <div class="col-lg-7 col-md-7 col-sm-12">
-                    <ul class="breadcrumb float-md-right padding-0">
+                    <ul class="breadcrumb float-md-end padding-0">
                         <li class="breadcrumb-item"><a href="<?= base_url('/') ?>"><i class="zmdi zmdi-home"></i></a></li>
                         <li class="breadcrumb-item"><a href="javascript:void(0);">App</a></li>
                         <li class="breadcrumb-item active">Contactos</li>
@@ -59,11 +59,11 @@ $this->extend('layouts/main');
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-sm-12 text-right">
+                            <div class="col-md-6 col-sm-12 text-end">
                                 <button type="button"
                                         class="btn btn-primary btn-round waves-effect"
-                                        data-toggle="modal"
-                                        data-target="#contact-modal"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#contact-modal"
                                         data-mode="create">
                                     <i class="zmdi zmdi-account-add"></i>&nbsp;Nuevo contacto
                                 </button>
@@ -78,22 +78,22 @@ $this->extend('layouts/main');
                         <?php if (empty($contacts)): ?>
                         <!-- Empty state -->
                         <div class="text-center p-5">
-                            <div class="m-b-20">
+                            <div class="mb-5">
                                 <i class="zmdi zmdi-accounts zmdi-hc-5x text-muted"></i>
                             </div>
                             <h5 class="text-muted">No hay contactos</h5>
                             <p class="text-muted">A&ntilde;ada su primer contacto para comenzar a enviar documentos.</p>
                             <button type="button"
                                     class="btn btn-primary btn-round waves-effect"
-                                    data-toggle="modal"
-                                    data-target="#contact-modal"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#contact-modal"
                                     data-mode="create">
                                 <i class="zmdi zmdi-account-add"></i>&nbsp;Nuevo contacto
                             </button>
                         </div>
                         <?php else: ?>
                         <div class="table-responsive">
-                            <table class="table table-hover m-b-0 c_list" id="contacts-table">
+                            <table class="table table-hover mb-0 c_list" id="contacts-table">
                                 <thead>
                                     <tr>
                                         <th>Nombre</th>
@@ -120,10 +120,10 @@ $this->extend('layouts/main');
                                         <td>
                                             <div class="media">
                                                 <div class="media-body">
-                                                    <p class="c_name m-b-0">
+                                                    <p class="c_name mb-0">
                                                         <?= $displayName ?>
                                                         <?php if ($contact->isLinked()): ?>
-                                                        <span class="badge badge-info m-l-10 hidden-sm-down" title="Usuario registrado">
+                                                        <span class="badge bg-info text-dark ms-3 hidden-sm-down" title="Usuario registrado">
                                                             <i class="zmdi zmdi-accounts"></i>
                                                         </span>
                                                         <?php endif; ?>
@@ -133,25 +133,25 @@ $this->extend('layouts/main');
                                         </td>
                                         <td>
                                             <span class="email">
-                                                <i class="zmdi zmdi-email m-r-10"></i>
+                                                <i class="zmdi zmdi-email me-3"></i>
                                                 <?= esc($contact->emailPrimary) ?>
                                             </span>
                                         </td>
                                         <td>
                                             <?php if ($contact->contactType === 'physical_person'): ?>
-                                            <span class="badge badge-default">F&iacute;sica</span>
+                                            <span class="badge bg-secondary">F&iacute;sica</span>
                                             <?php else: ?>
-                                            <span class="badge badge-default">Jur&iacute;dica</span>
+                                            <span class="badge bg-secondary">Jur&iacute;dica</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
                                             <?php
                                             $statusBadge = match ($contact->identityStatus) {
-                                                'pending'  => 'badge-warning',
-                                                'invited'  => 'badge-info',
-                                                'verified' => 'badge-success',
-                                                'rejected' => 'badge-danger',
-                                                default    => 'badge-secondary',
+                                                'pending'  => 'bg-warning text-dark',
+                                                'invited'  => 'bg-info text-dark',
+                                                'verified' => 'bg-success',
+                                                'rejected' => 'bg-danger',
+                                                default    => 'bg-secondary',
                                             };
                                             $statusLabel = match ($contact->identityStatus) {
                                                 'pending'  => 'Pendiente',
@@ -168,8 +168,8 @@ $this->extend('layouts/main');
                                         <td>
                                             <button type="button"
                                                     class="btn btn-icon btn-neutral btn-icon-mini btn-edit-contact"
-                                                    data-toggle="modal"
-                                                    data-target="#contact-modal"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#contact-modal"
                                                     data-mode="edit"
                                                     data-id="<?= esc($contact->id) ?>"
                                                     data-contact-type="<?= esc($contact->contactType) ?>"
@@ -226,15 +226,15 @@ $this->extend('layouts/main');
 
             <div class="modal-header">
                 <h4 class="title" id="contact-modal-label">Nuevo contacto</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <!-- Contact type -->
-                <div class="form-group">
-                    <label class="m-r-20">Tipo de contacto <span class="text-danger">*</span></label>
-                    <div class="radio inlineblock m-r-20">
+                <div class="mb-3">
+                    <label class="me-5">Tipo de contacto <span class="text-danger">*</span></label>
+                    <div class="radio inlineblock me-5">
                         <input type="radio"
                                name="contact_type"
                                id="contact-type-physical"
@@ -257,7 +257,7 @@ $this->extend('layouts/main');
                 <div id="modal-physical-fields">
                     <div class="row clearfix">
                         <div class="col-lg-6 col-md-6 col-sm-12">
-                            <div class="form-group">
+                            <div class="mb-3">
                                 <label for="contact-firstname">Nombre <span class="text-danger">*</span></label>
                                 <input type="text"
                                        class="form-control"
@@ -271,7 +271,7 @@ $this->extend('layouts/main');
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12">
-                            <div class="form-group">
+                            <div class="mb-3">
                                 <label for="contact-lastname">Apellidos <span class="text-danger">*</span></label>
                                 <input type="text"
                                        class="form-control"
@@ -291,7 +291,7 @@ $this->extend('layouts/main');
                 <div id="modal-legal-fields" style="display: none;">
                     <div class="row clearfix">
                         <div class="col-lg-6 col-md-6 col-sm-12">
-                            <div class="form-group">
+                            <div class="mb-3">
                                 <label for="contact-legalname">Raz&oacute;n social <span class="text-danger">*</span></label>
                                 <input type="text"
                                        class="form-control"
@@ -304,7 +304,7 @@ $this->extend('layouts/main');
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12">
-                            <div class="form-group">
+                            <div class="mb-3">
                                 <label for="contact-attentionof">A la atenci&oacute;n de <span class="text-danger">*</span></label>
                                 <input type="text"
                                        class="form-control"
@@ -322,7 +322,7 @@ $this->extend('layouts/main');
                 <!-- Common fields -->
                 <div class="row clearfix">
                     <div class="col-lg-6 col-md-6 col-sm-12">
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="contact-email">Email <span class="text-danger">*</span></label>
                             <input type="email"
                                    class="form-control"
@@ -336,7 +336,7 @@ $this->extend('layouts/main');
                         </div>
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12">
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="contact-phone">Tel&eacute;fono</label>
                             <input type="tel"
                                    class="form-control"
@@ -352,7 +352,7 @@ $this->extend('layouts/main');
 
                 <div class="row clearfix">
                     <div class="col-lg-6 col-md-6 col-sm-12">
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="contact-country">Pa&iacute;s <span class="text-danger">*</span></label>
                             <select class="form-control"
                                     id="contact-country"
@@ -385,7 +385,7 @@ $this->extend('layouts/main');
                         </div>
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12">
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="contact-postalcode">C&oacute;digo postal</label>
                             <input type="text"
                                    class="form-control"
@@ -400,7 +400,7 @@ $this->extend('layouts/main');
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-simple btn-round waves-effect" data-dismiss="modal">
+                <button type="button" class="btn btn-simple btn-round waves-effect" data-bs-dismiss="modal">
                     Cancelar
                 </button>
                 <button type="submit" class="btn btn-primary btn-round waves-effect">
@@ -424,7 +424,7 @@ $this->extend('layouts/main');
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="title" id="delete-modal-label">Eliminar contacto</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -433,7 +433,7 @@ $this->extend('layouts/main');
                 <p class="text-muted">Esta acci&oacute;n no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-simple btn-round waves-effect" data-dismiss="modal">
+                <button type="button" class="btn btn-simple btn-round waves-effect" data-bs-dismiss="modal">
                     Cancelar
                 </button>
                 <?= form_open('contacts/delete', ['id' => 'delete-form', 'method' => 'POST']) ?>
@@ -595,7 +595,7 @@ $this->extend('layouts/main');
 
         var value    = field.value ? field.value.trim() : '';
         var pattern  = modalValidators[name];
-        var feedback = field.closest('.form-group').querySelector('.invalid-feedback');
+        var feedback = field.closest('.mb-3').querySelector('.invalid-feedback');
         if (!feedback) return true;
 
         if (field.hasAttribute('required') && value === '') {

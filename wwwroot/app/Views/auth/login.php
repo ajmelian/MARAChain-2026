@@ -13,22 +13,22 @@
     <div class="col-md-6 offset-md-3 col-lg-4 offset-lg-4">
         <div class="card">
             <div class="body">
-                <div class="text-center m-b-20">
+                <div class="text-center mb-5">
                     <img src="/assets/images/logo.svg" width="64" height="64" alt="MARAChain">
-                    <h4 class="m-t-20">MARAChain</h4>
+                    <h4 class="mt-5">MARAChain</h4>
                     <p class="text-muted">Accede a tu cuenta</p>
                 </div>
 
                 <?php if (session('error') !== null) : ?>
                     <div class="alert alert-danger alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <?= esc(session('error')) ?>
                     </div>
                 <?php elseif (session('errors') !== null) : ?>
                     <div class="alert alert-danger alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <?php if (is_array(session('errors'))) : ?>
@@ -43,7 +43,7 @@
 
                 <?php if (session('message') !== null) : ?>
                     <div class="alert alert-success alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <?= esc(session('message')) ?>
@@ -105,7 +105,7 @@
                     </button>
                 </form>
 
-                <div class="text-center m-t-20">
+                <div class="text-center mt-5">
                     <?php if (setting('Auth.allowMagicLinkLogins')) : ?>
                         <p>
                             <a href="<?= url_to('magic-link') ?>">

@@ -25,7 +25,7 @@
 
                 <form method="post" action="/auth/fnmt/totp-setup" class="needs-validation mt-3" novalidate>
                     <?= csrf_field() ?>
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label for="totp_code">Codigo de verificacion</label>
                         <input type="text" class="form-control" id="totp_code" name="totp_code"
                                pattern="[0-9]{6}" maxlength="6" minlength="6"

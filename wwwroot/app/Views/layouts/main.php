@@ -11,6 +11,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>MARAChain - <?= esc($title ?? 'Plataforma') ?></title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#673ab7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MARAChain">
+    <link rel="apple-touch-icon" href="/assets/images/logo.svg">
     <link rel="stylesheet" href="/assets/plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/color_skins.css">
@@ -21,7 +27,7 @@
 <!-- Page Loader -->
 <div class="page-loader-wrapper">
     <div class="loader">
-        <div class="m-t-30"><img src="/assets/images/logo.svg" width="48" height="48" alt="MARAChain"></div>
+        <div class="mt-5"><img src="/assets/images/logo.svg" width="48" height="48" alt="MARAChain"></div>
         <p>Cargando...</p>
     </div>
 </div>
@@ -37,17 +43,17 @@
 ?>
 
 <!-- Top Navigation Bar -->
-<nav class="navbar navbar-fixed-top">
+<nav class="navbar fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a href="javascript:void(0);" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse">
+            <a href="javascript:void(0);" class="navbar-toggle collapsed" data-bs-toggle="collapse" data-bs-target="#navbar-collapse">
                 <i class="zmdi zmdi-menu"></i>
             </a>
             <a href="javascript:void(0);" class="bars"></a>
             <a class="navbar-brand" href="/">MARAChain</a>
         </div>
         <div class="collapse navbar-collapse" id="navbar-collapse">
-            <ul class="nav navbar-nav navbar-right">
+            <ul class="nav navbar-nav ms-auto">
                 <?php if ($loggedIn) : ?>
                 <li>
                     <a href="/inbox" class="<?= (($current ?? '') === 'inbox') ? 'active' : '' ?>">
@@ -123,5 +129,11 @@
 </script>
 
 <?= $this->renderSection('scripts') ?>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function() {});
+  }
+</script>
 </body>
 </html>

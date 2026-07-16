@@ -31,7 +31,7 @@ $this->extend('layouts/main');
                     <h2>Mi Perfil</h2>
                 </div>
                 <div class="col-lg-7 col-md-7 col-sm-12">
-                    <ul class="breadcrumb float-md-right padding-0">
+                    <ul class="breadcrumb float-md-end padding-0">
                         <li class="breadcrumb-item"><a href="<?= base_url('/') ?>"><i class="zmdi zmdi-home"></i></a></li>
                         <li class="breadcrumb-item"><a href="javascript:void(0);">P&aacute;ginas</a></li>
                         <li class="breadcrumb-item active">Mi Perfil</li>
@@ -69,10 +69,10 @@ $this->extend('layouts/main');
                                 <h6>Nivel de garant&iacute;a</h6>
                                 <?php
                                 $guaranteeBadge = match ($user->guaranteeLevel) {
-                                    'low'         => 'badge-secondary',
-                                    'substantial' => 'badge-info',
-                                    'high'        => 'badge-success',
-                                    default       => 'badge-secondary',
+                                    'low'         => 'bg-secondary',
+                                    'substantial' => 'bg-info text-dark',
+                                    'high'        => 'bg-success',
+                                    default       => 'bg-secondary',
                                 };
                                 $guaranteeLabel = match ($user->guaranteeLevel) {
                                     'low'         => 'Bajo',
@@ -84,7 +84,7 @@ $this->extend('layouts/main');
                                 <span class="badge <?= $guaranteeBadge ?> badge-lg">
                                     <?= $guaranteeLabel ?>
                                 </span>
-                                <small class="text-muted d-block m-t-5">
+                                <small class="text-muted d-block mt-2">
                                     <?php if ($user->guaranteeLevel === 'low'): ?>
                                         Seg&uacute;n eIDAS
                                     <?php elseif ($user->guaranteeLevel === 'substantial'): ?>
@@ -109,7 +109,7 @@ $this->extend('layouts/main');
                                 <h2><strong>Informaci&oacute;n</strong> personal</h2>
                                 <ul class="header-dropdown">
                                     <li class="dropdown">
-                                        <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <a href="javascript:void(0);" class="dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             <i class="zmdi zmdi-more"></i>
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-right">
@@ -146,11 +146,11 @@ $this->extend('layouts/main');
                                 <p>
                                     <?= esc($user->email) ?>
                                     <?php if ($user->isEmailVerified()): ?>
-                                        <span class="badge badge-success m-l-10">
+                                        <span class="badge bg-success ms-3">
                                             <i class="zmdi zmdi-check-circle"></i> Verificado
                                         </span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning m-l-10">
+                                        <span class="badge bg-warning text-dark ms-3">
                                             <i class="zmdi zmdi-alert-circle"></i> No verificado
                                         </span>
                                     <?php endif; ?>
@@ -165,11 +165,11 @@ $this->extend('layouts/main');
                                 <p>
                                     <?php
                                     $statusBadge = match ($user->status) {
-                                        'active'    => 'badge-success',
-                                        'inactive'  => 'badge-secondary',
-                                        'suspended' => 'badge-warning',
-                                        'blocked'   => 'badge-danger',
-                                        default     => 'badge-secondary',
+                                        'active'    => 'bg-success',
+                                        'inactive'  => 'bg-secondary',
+                                        'suspended' => 'bg-warning text-dark',
+                                        'blocked'   => 'bg-danger',
+                                        default     => 'bg-secondary',
                                     };
                                     $statusLabel = match ($user->status) {
                                         'active'    => 'Activo',
@@ -203,23 +203,23 @@ $this->extend('layouts/main');
                                     El nivel de garant&iacute;a determina la confianza en la identidad del usuario
                                     seg&uacute;n el reglamento eIDAS (Reglamento UE n.&ordm; 910/2014).
                                 </p>
-                                <div class="m-b-15">
-                                    <span class="badge badge-secondary">Bajo</span>
-                                    <small class="text-muted d-block m-t-5">
+                                <div class="mb-4">
+                                    <span class="badge bg-secondary">Bajo</span>
+                                    <small class="text-muted d-block mt-2">
                                         Identidad autodeclarada. Sin verificaci&oacute;n documental.
                                         &Uacute;til para pruebas o env&iacute;os informales.
                                     </small>
                                 </div>
-                                <div class="m-b-15">
-                                    <span class="badge badge-info">Sustancial</span>
-                                    <small class="text-muted d-block m-t-5">
+                                <div class="mb-4">
+                                    <span class="badge bg-info text-dark">Sustancial</span>
+                                    <small class="text-muted d-block mt-2">
                                         Identidad verificada con documento de identidad.
                                         Nivel equivalente a la identificaci&oacute;n presencial.
                                     </small>
                                 </div>
-                                <div class="m-b-0">
-                                    <span class="badge badge-success">Alto</span>
-                                    <small class="text-muted d-block m-t-5">
+                                <div class="mb-0">
+                                    <span class="badge bg-success">Alto</span>
+                                    <small class="text-muted d-block mt-2">
                                         Identidad verificada con documento + biometr&iacute;a o videollamada.
                                         M&aacute;ximo nivel de confianza eIDAS.
                                     </small>
@@ -238,7 +238,7 @@ $this->extend('layouts/main');
                                 <h2><strong>Autenticaci&oacute;n</strong> de dos factores (TOTP)</h2>
                                 <ul class="header-dropdown">
                                     <li class="dropdown">
-                                        <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <a href="javascript:void(0);" class="dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             <i class="zmdi zmdi-more"></i>
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-right">
@@ -256,7 +256,7 @@ $this->extend('layouts/main');
                                 <?php if ($user->hasTotpEnabled()): ?>
                                 <div class="row">
                                     <div class="col-md-8">
-                                        <div class="alert alert-success m-b-0" role="alert">
+                                        <div class="alert alert-success mb-0" role="alert">
                                             <i class="zmdi zmdi-check-circle"></i>
                                             <strong>TOTP activado.</strong>
                                             La autenticaci&oacute;n de dos factores est&aacute; habilitada en su cuenta.
@@ -273,7 +273,7 @@ $this->extend('layouts/main');
                                         <!-- QR code placeholder -->
                                         <div class="bg-light p-3 rounded">
                                             <i class="zmdi zmdi-smartphone zmdi-hc-4x text-muted"></i>
-                                            <p class="m-b-0 text-muted small">
+                                            <p class="mb-0 text-muted small">
                                                 <i class="zmdi zmdi-qrcode"></i>
                                                 Escanee el c&oacute;digo QR en su app de autenticaci&oacute;n
                                             </p>
@@ -281,7 +281,7 @@ $this->extend('layouts/main');
                                     </div>
                                 </div>
                                 <?php else: ?>
-                                <div class="alert alert-warning m-b-0" role="alert">
+                                <div class="alert alert-warning mb-0" role="alert">
                                     <i class="zmdi zmdi-alert-triangle"></i>
                                     <strong>TOTP no activado.</strong>
                                     La autenticaci&oacute;n de dos factores a&ntilde;ade una capa extra de seguridad.
@@ -299,7 +299,7 @@ $this->extend('layouts/main');
                                 <h2><strong>Dispositivos</strong> activos</h2>
                                 <ul class="header-dropdown">
                                     <li class="dropdown">
-                                        <a href="javascript:void(0);" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <a href="javascript:void(0);" class="dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             <i class="zmdi zmdi-more"></i>
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-right">
@@ -311,7 +311,7 @@ $this->extend('layouts/main');
                             <div class="body">
                                 <?php if (!empty($devices)): ?>
                                 <div class="table-responsive">
-                                    <table class="table table-hover m-b-0">
+                                    <table class="table table-hover mb-0">
                                         <thead>
                                             <tr>
                                                 <th>Dispositivo</th>
@@ -351,7 +351,7 @@ $this->extend('layouts/main');
                                                         default   => $device->deviceType,
                                                     };
                                                     ?>
-                                                    <i class="<?= $deviceIcon ?> m-r-5"></i>
+                                                    <i class="<?= $deviceIcon ?> me-5"></i>
                                                     <?= $deviceTypeLabel ?>
                                                 </td>
                                                 <td>
@@ -377,8 +377,8 @@ $this->extend('layouts/main');
                                 </div>
                                 <?php else: ?>
                                 <div class="text-center p-4">
-                                    <i class="zmdi zmdi-devices zmdi-hc-4x text-muted m-b-10"></i>
-                                    <p class="text-muted m-b-0">No hay dispositivos registrados.</p>
+                                    <i class="zmdi zmdi-devices zmdi-hc-4x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">No hay dispositivos registrados.</p>
                                 </div>
                                 <?php endif; ?>
                             </div>
@@ -414,7 +414,7 @@ $this->extend('layouts/main');
                                         </div>
                                     </div>
                                 </div>
-                                <div class="row clearfix m-t-10">
+                                <div class="row clearfix mt-3">
                                     <div class="col-lg-6 col-md-6 col-sm-12">
                                         <div class="info-box-3 bg-<?= $user->isEmailVerified() ? 'success' : 'warning' ?>">
                                             <div class="icon">
@@ -458,7 +458,7 @@ $this->extend('layouts/main');
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="title" id="revoke-device-modal-label">Revocar dispositivo</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -471,7 +471,7 @@ $this->extend('layouts/main');
                 </p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-simple btn-round waves-effect" data-dismiss="modal">
+                <button type="button" class="btn btn-simple btn-round waves-effect" data-bs-dismiss="modal">
                     Cancelar
                 </button>
                 <?= form_open('profile/devices/revoke', ['id' => 'revoke-device-form', 'method' => 'POST']) ?>

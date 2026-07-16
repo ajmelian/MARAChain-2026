@@ -12,7 +12,7 @@
 
                 <form method="post" action="/auth/fnmt/totp-verify" class="needs-validation mt-3" novalidate>
                     <?= csrf_field() ?>
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label for="totp_code">Codigo TOTP</label>
                         <input type="text" class="form-control form-control-lg text-center"
                                id="totp_code" name="totp_code"

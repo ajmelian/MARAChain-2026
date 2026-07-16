@@ -7,7 +7,7 @@
             <h2>Detalle de transferencia</h2>
         </div>
         <div class="col-lg-7 col-md-7 col-sm-12">
-            <ul class="breadcrumb float-md-right padding-0">
+            <ul class="breadcrumb float-md-end padding-0">
                 <li class="breadcrumb-item"><a href="/inbox"><i class="zmdi zmdi-home"></i></a></li>
                 <li class="breadcrumb-item"><a href="/inbox">Recibidos</a></li>
                 <li class="breadcrumb-item active">Transferencia</li>
@@ -55,7 +55,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="m-t-15">
+                <div class="mt-4">
                     <a href="/inbox" class="btn btn-default">
                         <i class="zmdi zmdi-arrow-back"></i> Volver
                     </a>

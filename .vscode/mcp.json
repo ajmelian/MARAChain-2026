@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vscode/main/extensions/github.issues/configuration-schemas/mcp.schema.json",
+  "servers": {
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "sonarqube": {
+      "type": "local",
+      "command": "/home/aythami/.nvm/versions/node/v22.23.1/bin/sonarqube-api-mcp",
+      "args": [],
+      "env": {
+        "SONAR_TOKEN": "${env:SONARQUBE_TOKEN}",
+        "SONAR_HOST_URL": "https://sonarcloud.io"
+      }
+    },
+    "playwright": {
+      "type": "local",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp",
+        "--config",
+        "/home/aythami/.config/opencode/playwright-mcp-config.json"
+      ],
+      "env": {
+        "PATH": "/home/aythami/.nvm/versions/node/v22.23.1/bin:$PATH"
+      }
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "timeout": 10000
+    },
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:ATLASSIAN_API_TOKEN}"
+      }
+    }
+  }
+}

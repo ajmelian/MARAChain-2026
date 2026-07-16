@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.6.0 | **Last Updated:** 2026-07-16
+> **Version:** 1.7.0 | **Last Updated:** 2026-07-16
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -67,8 +67,8 @@ php -m
 ### 1. Clone Repository
 
 ```bash
-git clone git@github.com:your-org/marachain.git
-cd marachain
+git clone git@github.com:ajmelian/MARAChain-2026.git
+cd MARAChain
 ```
 
 ### 2. Install Dependencies
@@ -140,14 +140,16 @@ database.default.DBDriver = MySQLi
 database.default.port = 3306
 
 # ── ENCRYPTION ──
-# Generate with: php -r "echo bin2hex(random_bytes(16));"
+# Generate with: php -r "echo bin2hex(random_bytes(32));"
 encryption.key = your64characterhexkeyhere
+encryption.hmacKey = your64characterhmackeyhere
 ```
 
-**Generar encryption key:**
+**Generar encryption keys:**
 
 ```bash
-php -r "echo 'encryption.key = ' . bin2hex(random_bytes(16)) . PHP_EOL;"
+php -r "echo 'encryption.key = ' . bin2hex(random_bytes(32)) . PHP_EOL;"
+php -r "echo 'encryption.hmacKey = ' . bin2hex(random_bytes(32)) . PHP_EOL;"
 ```
 
 ### 6. Run Migrations
@@ -181,8 +183,9 @@ php spark migrate:status
 | App                 | 2026-07-14-400000_AddShieldUserIdToUsers    | migrated   |
 | App                 | 2026-07-14-500000_CreateNotificationReque.. | migrated   |
 | App                 | 2026-07-14-600000_CreateGlobalMessagingAc.. | migrated   |
-| App                 | 2026-07-14-700000_CreateSettingsTable        | migrated   |
-| App                 | 2026-07-14-700001_AddContextColumn           | migrated   |
+| App                 | 2026-07-14-700000_CreateSettingsTable       | migrated   |
+| App                 | 2026-07-14-700001_AddContextColumn          | migrated   |
+| App                 | 2026-07-14-800000_AddIpfsAndBlockchainIds   | migrated   |
 | Shield              | (auth tables)                               | migrated   |
 +---------------------+---------------------------------------------+------------+
 ```
@@ -201,7 +204,7 @@ php spark db:seed DatabaseSeeder
 mysql -u marachain_user -p marachain -e "SHOW TABLES;"
 ```
 
-**Tablas esperadas:**
+**Tablas esperadas (20+):**
 
 ```
 +-----------------------------+
@@ -226,7 +229,6 @@ mysql -u marachain_user -p marachain -e "SHOW TABLES;"
 | migrations                  |
 | notification_requested      |
 | notifications               |
-| settings                    |
 | settings                    |
 | signature_requests          |
 | users                       |
@@ -253,7 +255,7 @@ php spark serve --port=8080
 ### 10. Run Tests
 
 ```bash
-# Todos los tests (~220 tests, ~500 assertions)
+# Todos los tests (~500 assertions en 33 archivos)
 php vendor/bin/phpunit
 
 # Solo tests unitarios
@@ -271,25 +273,18 @@ php vendor/bin/phpunit --verbose --testdox
 ```
 PHPUnit 10.5.x by Sebastian Bergmann and contributors.
 
-.............................................................   61 / 178
-.............................................................  122 / 178
-.............................................................  178 / 178
+.............................................................   XXX / XXX
 
 Time: 00:XX.XXX, Memory: XX.00 MB
 
-OK (178 tests, 422 assertions)
+OK (XXX tests, ~500 assertions)
 ```
 
 ### 11. Test API Endpoints
 
 ```bash
-# Test endpoint de usuarios (necesita servidor corriendo)
-curl -X GET http://localhost:8080/users
-
-# Crear un usuario
-curl -X POST http://localhost:8080/users \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","identityType":"physical","firstName":"Test"}'
+# Test health endpoint (publico)
+curl -X GET http://localhost:8080/health
 
 # Verificar security headers
 curl -I http://localhost:8080/ | grep -E "X-Content-Type|X-Frame|X-XSS|Referrer|Strict|Content-Security|Permissions"
@@ -323,29 +318,16 @@ mysql -u marachain_user -p -h localhost marachain -e "SELECT 1;"
 composer dump-autoload
 ```
 
-### Error: `SQLSTATE[HY000] [2002] Connection refused`
+### Error: `encryption.key is not set` o `encryption.hmacKey is not set`
 
-**Causa**: MySQL no esta escuchando en el puerto configurado.
-
-**Solucion**:
-
-```bash
-# Verificar puerto MySQL
-sudo netstat -tlnp | grep 3306
-
-# Si usas Docker
-docker ps | grep mysql
-```
-
-### Error: `encryption.key is not set`
-
-**Causa**: Falta la clave de cifrado en `.env`.
+**Causa**: Faltan las claves de cifrado en `.env`.
 
 **Solucion**:
 
 ```bash
 # Generar y anadir al .env
-echo "encryption.key = $(php -r 'echo bin2hex(random_bytes(16));')" >> .env
+echo "encryption.key = $(php -r 'echo bin2hex(random_bytes(32));')" >> .env
+echo "encryption.hmacKey = $(php -r 'echo bin2hex(random_bytes(32));')" >> .env
 ```
 
 ### Error: `The framework needs the following extension(s) installed and loaded`
@@ -363,17 +345,7 @@ sudo apt install php8.5-intl
 sudo systemctl restart php8.5-fpm  # Si usas FPM
 ```
 
-### Error: `PHP Parse error: syntax error, unexpected '?'`
-
-**Causa**: Version de PHP inferior a 7.4 (nullable types).
-
-**Solucion**:
-
-```bash
-php -v  # Debe mostrar >= 8.2
-```
-
-### Tests fallan con `no such table: db_users`
+### Tests fallan con `no such table`
 
 **Causa**: Migraciones no ejecutadas para el entorno de testing.
 
@@ -391,8 +363,6 @@ php vendor/bin/phpunit
 ## Production Deployment
 
 ### VPS Deployment (Apache)
-
-Para despliegue en produccion con Apache en un VPS:
 
 #### 1. Requisitos de servidor
 
@@ -427,49 +397,7 @@ sudo chmod -R 775 /var/www/prod/writable/
 sudo chmod 640 /var/www/prod/.env
 ```
 
-#### 4. Apache VirtualHost
-
-```apache
-# /etc/apache2/sites-available/marachain.conf
-<VirtualHost *:80>
-    ServerName marachain.example.com
-    Redirect permanent / https://marachain.example.com/
-</VirtualHost>
-
-<VirtualHost *:443>
-    ServerName marachain.example.com
-    DocumentRoot /var/www/prod/public
-
-    <Directory /var/www/prod/public>
-        Options -Indexes +FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    # Deny access to sensitive files
-    <FilesMatch "\.(env|htaccess|git|json|lock|md|yml|yaml|xml|dist)$">
-        Require all denied
-    </FilesMatch>
-
-    ErrorLog ${APACHE_LOG_DIR}/marachain_error.log
-    CustomLog ${APACHE_LOG_DIR}/marachain_access.log combined
-
-    SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/marachain.crt
-    SSLCertificateKeyFile /etc/ssl/private/marachain.key
-</VirtualHost>
-```
-
-#### 5. .htaccess (en `public/`)
-
-```apache
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php/$1 [L]
-```
-
-#### 6. Variables de entorno en produccion
+#### 4. Variables de entorno en produccion
 
 ```ini
 # .env (produccion)
@@ -477,6 +405,7 @@ CI_ENVIRONMENT = production
 app.baseURL = 'https://marachain.example.com/'
 app.forceGlobalSecureRequests = true
 encryption.key = [clave segura unica de 64 caracteres hex]
+encryption.hmacKey = [clave segura unica de 64 caracteres hex]
 
 database.default.hostname = localhost
 database.default.database = marachain
@@ -484,7 +413,7 @@ database.default.username = [usuario_produccion]
 database.default.password = [password_segura]
 ```
 
-#### 7. Comandos post-deploy
+#### 5. Comandos post-deploy
 
 ```bash
 cd /var/www/prod
@@ -500,6 +429,7 @@ curl -I https://marachain.example.com/ | grep -E "HTTP/|X-"
 
 - [ ] `CI_ENVIRONMENT = production`
 - [ ] `encryption.key` configurada y unica
+- [ ] `encryption.hmacKey` configurada y unica
 - [ ] HTTPS activo (TLS 1.2+)
 - [ ] `forcehttps` filter activo
 - [ ] Security headers presentes en todas las respuestas
@@ -520,19 +450,19 @@ curl -I https://marachain.example.com/ | grep -E "HTTP/|X-"
 
 ```bash
 # ── Desarrollo ──
-git clone git@github.com:your-org/marachain.git
-cd marachain/wwwroot
+git clone git@github.com:ajmelian/MARAChain-2026.git
+cd MARAChain/wwwroot
 composer install
 cp env .env
 nano .env                                    # Configurar MySQL + encryption.key + encryption.hmacKey
 php spark migrate
 php spark shield:setup                       # Configurar SHIELD auth
 php spark serve                              # http://localhost:8080
-php vendor/bin/phpunit                       # ~220 tests
+php vendor/bin/phpunit                       # ~500 assertions
 
 # ── Comandos utiles ──
 php spark list                               # Listar comandos
-php spark migrate:status                     # Estado migraciones
+php spark migrate:status                     # Estado migraciones (17 migrations)
 php spark make:migration CreateTableName     # Nueva migracion
 php spark make:controller NewController      # Nuevo controlador
 php spark make:model NewModel                # Nuevo modelo
@@ -547,17 +477,17 @@ composer audit                               # Auditoria de seguridad
 composer dump-autoload                       # Regenerar autoloader
 
 # ── Autenticacion SHIELD ──
-php spark shield:setup                          # Configurar SHIELD
-php spark shield:user create                    # Crear usuario
+php spark shield:setup                       # Configurar SHIELD
+php spark shield:user create                 # Crear usuario
 
 # ── Comandos MARAChain ──
-php spark ledger:genesis                        # Bloque genesis
-php spark ledger:seal                           # Sellar evidencias
-php spark notifications:send                     # Enviar notificaciones multi-canal
+php spark ledger:genesis                     # Bloque genesis
+php spark ledger:seal                        # Sellar evidencias
+php spark notifications:send                 # Enviar notificaciones multi-canal
 
 # ── Testing ──
-php vendor/bin/phpunit                          # Todos los tests (178)
-php vendor/bin/phpunit --testsuite unit         # Unit tests
-php vendor/bin/phpunit --filter UserModel       # Tests filtrados
-php vendor/bin/phpunit --coverage-text          # Cobertura
+php vendor/bin/phpunit                       # Todos los tests
+php vendor/bin/phpunit --testsuite unit      # Unit tests
+php vendor/bin/phpunit --filter UserModel    # Tests filtrados
+php vendor/bin/phpunit --coverage-text       # Cobertura
 ```

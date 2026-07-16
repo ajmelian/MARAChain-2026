@@ -1,6 +1,6 @@
 # Security Policy
 
-> **Version:** 1.6.0 | **Last Updated:** 2026-07-16
+> **Version:** 1.7.0 | **Last Updated:** 2026-07-16
 
 MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evidencias criptograficas. La seguridad es un requisito fundamental, no una caracteristica opcional.
 
@@ -10,9 +10,9 @@ MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evid
 
 | Version | Status | Security Support |
 |---------|--------|-----------------|
-| 1.6.0 (pre-alpha) | In Development | Not yet in production |
+| 1.7.0 (pre-alpha) | In Development | Not yet in production |
+| 1.6.0 (pre-alpha) | EOL (superseded by 1.7.0) | Not released |
 | 1.5.0 (pre-alpha) | EOL (superseded by 1.6.0) | Not released |
-| 1.4.0 (pre-alpha) | EOL (superseded by 1.5.0) | Not released |
 
 Once in production, only the latest `MAJOR.MINOR` release will receive security patches.
 
@@ -46,15 +46,15 @@ Reporta vulnerabilidades de forma privada:
 
 Implementado via `App\Filters\SecurityHeaders` como filtro global `after`:
 
-| Header | Value | OWASP Reference |
-|--------|-------|-----------------|
-| `X-Content-Type-Options` | `nosniff` | [X-Content-Type-Options](https://owasp.org/www-project-secure-headers/#x-content-type-options) |
-| `X-Frame-Options` | `DENY` | [X-Frame-Options](https://owasp.org/www-project-secure-headers/#x-frame-options) |
-| `X-XSS-Protection` | `1; mode=block` | [X-XSS-Protection](https://owasp.org/www-project-secure-headers/#x-xss-protection) |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | [Referrer-Policy](https://owasp.org/www-project-secure-headers/#referrer-policy) |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | [HSTS](https://owasp.org/www-project-secure-headers/#strict-transport-security) |
-| `Content-Security-Policy` | `default-src 'self'` | [CSP](https://owasp.org/www-project-secure-headers/#content-security-policy) |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | [Permissions-Policy](https://owasp.org/www-project-secure-headers/#permissions-policy) |
+| Header | Value |
+|--------|-------|
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `X-XSS-Protection` | `1; mode=block` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
+| `Content-Security-Policy` | `default-src 'self'` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
 
 ### 2. Input Validation (Defense in Depth)
 
@@ -67,9 +67,8 @@ Validation en backend (CI4 rules) y frontend (JS) identica para todos los inputs
 | Tax ID (NIF/NIE/CIF) | `valid_tax_id` (CustomRules) | NIF/NIE/CIF regex patterns |
 | UUID v4 | `valid_uuid` (CustomRules) | `^[0-9a-f]{8}-...-4...-[89ab]...-[0-9a-f]{12}$` |
 | Hex (SHA-256) | `exact_length[64]` | 64-character hex |
-| MIME type | `in_list[application/pdf]` | Solo PDF en MVP |
 
-**Validation groups** definidos en `app/Config/Validation.php` para cada entidad (9 grupos).
+**Validation groups** definidos en `app/Config/Validation.php` para cada entidad (9 grupos) — Fase 4 completada.
 
 ### 3. Query Builder (Prevencion de SQL Injection)
 
@@ -78,7 +77,6 @@ Todo acceso a base de datos usa **CI4 Query Builder**, nunca raw SQL concatenado
 ```php
 // Correcto — Query Builder con prepared statements
 $this->where('email', $email)->first();
-$this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 
 // Prohibido — raw SQL con concatenacion
 // $this->db->query("SELECT * FROM users WHERE email = '$email'");
@@ -89,86 +87,63 @@ $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 - Todas las PKs son `CHAR(36)` UUID v4 generados en PHP (`random_bytes(16)`)
 - Previene enumeracion de IDs (no secuenciales)
 - `$useAutoIncrement = false` en todos los modelos
-- Compatible con entornos distribuidos futuros
 
-### 5. Prepared Statements
-
-CI4 Query Builder genera automaticamente prepared statements parametrizados:
-
-```php
-// Internamente: INSERT INTO users (id, email, ...) VALUES (?, ?, ...)
-$this->insert($row);
-```
-
-### 6. Encrypted Tax ID (NIF/NIE)
-
-El NIF/NIE se almacena con cifrado de doble capa:
+### 5. Encrypted Tax ID (NIF/NIE)
 
 - **Cifrado AEAD** (`tax_id_encrypted`): valor cifrado con autenticacion
 - **HMAC determinista** (`tax_id_hmac`): busqueda sin descifrar
-  - SHA-256 HMAC con clave separada (64 caracteres hex)
-  - Busqueda por `findByTaxIdHmac($hmac)` sin exponer el valor real
 
-### 7. TOTP Support
+### 6. TOTP Support
 
-- Secrets TOTP cifrados en reposo (`totp_secret_encrypted`)
+- Secrets TOTP cifrados en reposo via AES-256-GCM
 - Bloqueo progresivo tras 5 fallos consecutivos (30 minutos)
-- Contador de fallos con reset automatico en exito
-- Estado `blocked` en la entidad User
+- Contador atomico: `SET col = col + 1` (anti-TOCTOU)
 
-### 8. Session Security
+### 7. Session Security
 
 - Sesiones gestionadas via SHIELD (`CodeIgniter\Shield\Filters\SessionAuth`)
-- Rotacion de sesion y proteccion CSRF integradas en SHIELD
+- Rotacion de sesion y proteccion CSRF integradas
 - Cookie `HttpOnly` y `Secure` en produccion
 - `forcehttps` filter redirige HTTP → HTTPS
 
-### 9. Rate Limiting
+### 8. Rate Limiting
 
-- Implementado via `App\Filters\Throttle` — token bucket basado en archivos
 - **auth group**: 6 req/min (login, register, TOTP verify)
 - **api group**: 60 req/min (REST endpoints)
 - Fingerprint via SHA1(IP address + request path)
 - Retorna HTTP 429 con header `retry_after`
-- Sin dependencia externa (Redis/memcached) para MVP
 
-### 10. HTTPS Enforcement
+### 9. HTTPS Enforcement
 
 - `forcehttps` filtro global `before`
 - HSTS header con `max-age=31536000; includeSubDomains`
-- `$forceGlobalSecureRequests` configurable via `.env`
+
+### 10. API Authentication Filter (`api-auth`)
+
+- Filtro aplicado a TODAS las rutas API REST
+- Requiere sesion SHIELD activa con permisos de grupo
+- Rutas publicas: `/health` (health check)
+
+### 11. FNMT TOTP Rate Limiting
+
+- `throttle:auth` aplicado a rutas TOTP FNMT (POST)
+- Limite de 6 req/min para prevenir brute-force de codigos TOTP
 
 ### 12. Ciphertext Envelope Validation (StorageService)
 
 - Validacion estricta del formato `marachain-envelope v1`: `{version, algorithm, iv, ciphertext, tag}`
 - Verificacion de integridad AEAD (tag) antes de almacenar ciphertext en BD
-- Rechazo de envelopes con versiones no soportadas o algoritmos no permitidos
 - La DEK (Data Encryption Key) nunca se almacena en el backend
 
 ### 13. Nginx mTLS Configuration
 
-- `ssl_verify_client optional` a nivel global (permite acceso anonimo y certificado)
-- `ssl_verify_client` obligatorio en location `/auth/fnmt` (requiere certificado FNMT valido)
-- Cabeceras `SSL_CLIENT_*` pasadas a PHP-FPM via `fastcgi_param`
+- `ssl_verify_client optional` a nivel global
+- `ssl_verify_client` obligatorio en location `/auth/fnmt`
 - `ssl_verify_depth 4` para validar cadena de certificacion FNMT completa
-- Configuracion documentada en `nginx-fnmt-mtls.conf`
 
-### 15. API Authentication Filter (`api-auth`)
+### 14. Atomic Database Operations
 
-- Filtro aplicado a TODAS las rutas API REST (`/users`, `/devices`, `/documents`, `/transfers`, `/signatures`, `/evidence`, `/ledger`, `/contacts`, `/notifications`)
-- Requiere sesion SHIELD activa con permisos de grupo adecuados (superadmin, admin, developer, user)
-- Previene acceso no autenticado a datos de usuarios, documentos, y evidencias
-- Rutas publicas: `/health` (health check), rutas web de auth sin sesion
-
-### 16. FNMT TOTP Rate Limiting
-
-- `throttle:auth` aplicado a `POST /auth/fnmt/totp-setup` y `POST /auth/fnmt/totp-verify`
-- Limite de 6 req/min para prevenir brute-force de codigos TOTP de 6 digitos
-- AP-3 del audit report v1.2.1 corregido
-
-### 17. Atomic Database Operations
-
-- `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico (evita TOCTOU)
+- `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico
 - `sealBlock()` envuelto en transaccion BD con rollback en fallo
 - State transitions con guarda atomica `->where('status', $row['status'])`
 
@@ -178,14 +153,14 @@ El NIF/NIE se almacena con cifrado de doble capa:
 
 | # | Riesgo | Medida Implementada | Estado |
 |---|--------|---------------------|--------|
-| A01 | Broken Access Control | SHIELD session-based auth con grupos de permisos; rutas web protegidas con `session` filter; rutas API protegidas con `api-auth` filter | ✅ Implementado |
-| A02 | Cryptographic Failures | AES-256-GCM para NIF y TOTP, encryption.key en .env, sin hardcoding, HMAC para busqueda | ✅ Implementado |
+| A01 | Broken Access Control | SHIELD session-based auth; rutas web `session` filter; rutas API `api-auth` filter | ✅ Implementado |
+| A02 | Cryptographic Failures | AES-256-GCM para NIF y TOTP, encryption.key en .env, sin hardcoding | ✅ Implementado |
 | A03 | Injection | Query Builder (prepared statements), validacion regex identica front/back, sin raw SQL | ✅ Implementado |
-| A04 | Insecure Design | SDD con OpenSpec, threat modeling (STRIDE/LINDDUN), ADR documentados, auditoria de seguridad (v1.2.1) | ✅ Implementado |
+| A04 | Insecure Design | SDD con OpenSpec, threat modeling (STRIDE/LINDDUN), ADR documentados, auditoria de seguridad | ✅ Implementado |
 | A05 | Security Misconfiguration | SecurityHeaders global, forcehttps, CSP, Throttle rate limiting, sin debug en prod | ✅ Implementado |
-| A06 | Vulnerable Components | `composer audit`, `composer.lock`, dependencias minimas auditadas, CI/CD con auditoria | ⚠️ Sin CI |
+| A06 | Vulnerable Components | `composer audit`, `composer.lock`, dependencias minimas auditadas | ⚠️ Sin CI |
 | A07 | Auth Failures | SHIELD + TOTP con bloqueo atomico (5 fallos), rate limiting en login/register, UUID no enumerable | ✅ Implementado |
-| A08 | Software & Data Integrity | SHA-256 hashes para documentos, Merkle tree en ledger, verificacion de cadena, transacciones atomicas | ✅ Implementado |
+| A08 | Software & Data Integrity | SHA-256 hashes, Merkle tree en ledger, verificacion de cadena, transacciones atomicas | ✅ Implementado |
 | A09 | Logging & Monitoring | CI4 Logger, evidencias append-only con `EVIDENCE_LOST` logging, health endpoint, sin PII en logs | ✅ Implementado |
 | A10 | SSRF | N/A en MVP (sin fetch remoto); validacion futura de webhooks | N/A |
 
@@ -201,22 +176,18 @@ El NIF/NIE se almacena con cifrado de doble capa:
 ```bash
 # Auditoria de dependencias PHP
 composer audit
-
-# En CI/CD (GitLab CI / GitHub Actions)
-# composer audit --format=json > audit.json
-# Exit code 1 si hay vulnerabilidades criticas o altas
 ```
 
 ### Dependencias principales
 
 | Paquete | Version | Auditoria |
 |---------|---------|-----------|
-| `codeigniter4/framework` | `^4.7` | Comunidad activa, releases frecuentes |
-| `codeigniter4/shield` | `^1.3` | Auth oficial CI4, mantenido por BCIT |
-| `codeigniter4/settings` | `^2.3` | Settings oficial CI4, mantenido por BCIT |
-| `phpunit/phpunit` | `^10.5.16` | Dev only, no incluido en produccion |
-| `fakerphp/faker` | `^1.9` | Dev only, para seeds de prueba |
-| `mikey179/vfsstream` | `^1.6` | Dev only, mock de filesystem |
+| `codeigniter4/framework` | `^4.7` | Comunidad activa |
+| `codeigniter4/shield` | `^1.3` | Auth oficial CI4 |
+| `codeigniter4/settings` | `^2.3` | Settings oficial CI4 |
+| `phpunit/phpunit` | `^10.5.16` | Dev only |
+| `fakerphp/faker` | `^1.9` | Dev only |
+| `mikey179/vfsstream` | `^1.6` | Dev only |
 
 ---
 
@@ -228,9 +199,10 @@ composer audit
 |---------|-----------|---------|
 | Database password | `.env` → `database.default.password` | Plain text |
 | Encryption key | `.env` → `encryption.key` | Hex (64 chars) |
+| HMAC key | `.env` → `encryption.hmacKey` | Hex (64 chars) |
 | TOTP secrets | `users.totp_secret_encrypted` (DB) | AEAD ciphertext |
 | Tax ID (NIF/NIE) | `users.tax_id_encrypted` (DB) | AEAD ciphertext |
-| API keys (futuro) | `.env` o vault externo | Por definir |
+| Notification secrets | `/var/lib/marachain/integrations/` | Fuera de wwwroot |
 
 **`.env` esta en `.gitignore`** — NUNCA se commitea.
 

@@ -6,20 +6,79 @@
 
 | Date | Version | Auditor | Scope | Findings | Status |
 |------|---------|---------|-------|----------|--------|
+| 2026-07-16 | 1.6.0 → 1.7.0 | Internal | Documentacion completa, OpenSpec state sync, Phase 4 validacion, consistencia entre ficheros | Actualizacion de 8 ficheros de documentacion: README, ARCHITECTURE, CHANGELOG, VERSION, CONFIGURATION, SECURITY, AUDITORY, INSTALL. State tracker: 64/66 tareas completadas. 17th migration documentada. TimestampService y TimestampController documentados. | **Completada** |
 | 2026-07-16 | 1.5.0 → 1.6.0 | Internal | Settings table, context column, api-auth filter, NotificationRequestedModel, new tests | 2 migrations + 1 model + 1 filter + 10 test files: SHIELD settings DB-backed, API routes protected, FNMT TOTP rate-limited (AP-3 fixed) | **Completada** |
 | 2026-07-14 | 1.4.0 → 1.5.0 | Internal | Sistema de notificaciones: 14 archivos (Notifications/, Commands/, Migrations/) | Notifications system integrated: multi-channel outbox, Provider Pattern, global accounts, stubs for future channels | **Completada** |
 | 2026-07-14 | 1.2.0 → 1.4.0 | Internal | 33 archivos + 10 nuevos: controladores, servicios, migrations, deploy scripts | 16 defectos (12 corregidos, 4 pendientes), MVP features integrados | **Completada** |
 
 ---
 
-## Auditoria 1.2.0 → 1.2.1 (2026-07-14)
+## v1.7.0 — Documentation & Phase 4 Validation Audit (2026-07-16)
 
 ### Alcance
 
-- **Archivos revisados**: 33
-- **Capas auditadas**: Controladores Web (9), Modelos (9), Servicios + Comandos (15)
-- **Tests ejecutados**: 178 tests, 422 assertions — OK
-- **Commits**: `dfd913a` → `24db03e`
+- **Archivos revisados**: 8 archivos de documentacion (README.md, ARCHITECTURE.md, CHANGELOG.md, VERSION.md, CONFIGURATION.md, SECURITY.md, AUDITORY.md, INSTALL.md)
+- **State tracker**: `.opencode/openspec/.state.yaml` — 66 atomic tasks
+- **Roadmap phases**: Fase 1 (Entities) → Fase 7 (Security) verificadas como completadas
+
+### Correcciones de documentacion
+
+| ID | Documento | Descripcion | Tipo |
+|----|-----------|-------------|------|
+| DOC-1 | README.md | Recuento de migraciones: 16→17 (nueva `800000_AddIpfsAndBlockchainIds`) | Correccion |
+| DOC-2 | README.md | Recuento de controladores REST: 11→12 (nuevo `TimestampController`) | Correccion |
+| DOC-3 | README.md | Recuento de servicios: 10→11 (nuevo `TimestampService`) | Correccion |
+| DOC-4 | README.md | Tests: 22→33 archivos (~220→~500 assertions) | Correccion |
+| DOC-5 | README.md | Estructura del proyecto actualizada con 17 migraciones | Correccion |
+| DOC-6 | ARCHITECTURE.md | ADR-020 documentado: migracion 800000 columnas IPFS/blockchain | Nuevo |
+| DOC-7 | ARCHITECTURE.md | Directory tree actualizado con TimestampController y 17 migraciones | Correccion |
+| DOC-8 | ARCHITECTURE.md | API endpoints: TimestampController endpoints documentados | Nuevo |
+| DOC-9 | ARCHITECTURE.md | Database section: 16→17 items | Correccion |
+| DOC-10 | CHANGELOG.md | Nueva entrada [1.7.0] con todos los cambios de documentacion | Nuevo |
+| DOC-11 | CHANGELOG.md | [Unreleased] reorganizado con P1/P2 items del TODO | Correccion |
+| DOC-12 | VERSION.md | Bump: 1.6.0→1.7.0, nueva entrada en version history | Actualizacion |
+| DOC-13 | CONFIGURATION.md | Version header 1.6.0→1.7.0, Feature Flags actualizados | Actualizacion |
+| DOC-14 | SECURITY.md | Version header 1.6.0→1.7.0, Supported Versions actualizado | Actualizacion |
+| DOC-15 | INSTALL.md | Version header, test counts corregidos, tabla de migraciones actualizada | Correccion |
+| DOC-16 | AUDITORY.md | Nueva entrada de auditoria v1.7.0 | Nuevo |
+
+### OpenSpec State Sync
+
+| Fase | Tareas | Estado | Evidencia |
+|------|--------|:------:|-----------|
+| **Fase 1** — Entities | 001-008-015-022-029-036-043-050-057 (9) | ✅ Completed | 9 entidades en `app/Entities/` |
+| **Fase 2** — Migrations | 002-009-016-023-030-037-044-051-058 (9) | ✅ Completed | 17 migraciones en `app/Database/Migrations/` |
+| **Fase 3** — Model Tests (RED) | 003-010-017-024-031-038-045-052-059 (9) | ✅ Completed | 9 model test files |
+| **Fase 4** — Models (GREEN) | 004-011-018-025-032-039-046-053-060 (9) | ✅ Completed | 10 modelos |
+| **Fase 5** — Validation | 005-012-019-026-033-040-047-054-061 (9) | ✅ Completed | 9 validation groups + 4 CustomRules |
+| **Fase 6** — Controller Tests (RED) | 006-013-020-027-034-041-048-055-062 (9) | ✅ Completed | 15 controller test files |
+| **Fase 7** — Controllers (GREEN) | 007-014-021-028-035-042-049-056-063 (9) | ✅ Completed | 12 REST + 6 Web controllers |
+| **Fase 8** — Security + Docs | 064, 066 (2) | ✅/🔄 | SecurityHeaders ✅, Docs 🔄 |
+| **Fase 9** — E2E Tests | 065 (1) | ⏳ Pending | Playwright tests no iniciados |
+
+### Totales verificados
+
+```text
+Tareas completadas:  64/66 (97%)
+Tareas pendientes:   1 (065 E2E Tests)
+Tareas en progreso:  1 (066 Documentacion)
+Migraciones:         17
+Controladores REST:  12
+Controladores Web:   6
+Modelos:             10
+Servicios:           11 (6 impl + 5 interfaces)
+Tests:               33 archivos, ~500 assertions
+```
+
+### Referencias
+
+- CHANGELOG: [CHANGELOG.md#170---2026-07-16](./CHANGELOG.md#170---2026-07-16)
+- Version: [VERSION.md](./VERSION.md)
+- State: [.opencode/openspec/.state.yaml](./.opencode/openspec/.state.yaml)
+
+---
+
+## v1.2.0 → 1.2.1 (2026-07-14)
 
 ### Correcciones Aplicadas (12/16)
 
@@ -42,33 +101,10 @@
 
 | ID | Categoria | Descripcion | Impacto |
 |----|-----------|-------------|---------|
-| AP-1 | CSRF | Filtro CSRF global deshabilitado | Alto — requiere cambios en todas las plantillas |
-| AP-2 | Sesion | No se regenera sesion en flujo FNMT | Medio — session fixation posible |
-| AP-3 | Rate limit | Sin rate limiting en rutas TOTP FNMT | Alto — brute-force de codigos de 6 digitos |
-| AP-4 | RCE | Plantillas PHP inline en TransfersController | Critico — reemplazar con archivos de vista |
-
-### Observaciones (15)
-
-Ver [AUDIT_REPORT.md](./AUDIT_REPORT.md#4-observaciones-especulativas-no-modificadas) para el detalle completo de las 15 observaciones especulativas (O-1 a O-15).
-
-### Archivos Modificados
-
-| Fichero | Cambios |
-|---------|---------|
-| `app/Services/LedgerService.php` | +42/-35 |
-| `app/Models/UserModel.php` | +16/-11 |
-| `app/Models/NotificationModel.php` | -13/+5 |
-| `app/Models/DocumentTransferModel.php` | +10/-1 |
-| `app/Entities/DocumentTransfer.php` | +4/-4 |
-| `app/Commands/NotificationSend.php` | +18/-6 |
-| `app/Controllers/Web/FnmtController.php` | +118/-8 |
-| `app/Controllers/Web/AuthController.php` | +22/-10 |
-
-### Referencias
-
-- Informe completo: [AUDIT_REPORT.md](./AUDIT_REPORT.md)
-- CHANGELOG: [CHANGELOG.md#121---2026-07-14](./CHANGELOG.md#121---2026-07-14)
-- Version: [VERSION.md](./VERSION.md)
+| AP-1 | CSRF | Filtro CSRF global deshabilitado | Alto |
+| AP-2 | Sesion | No se regenera sesion en flujo FNMT | Medio |
+| AP-3 | Rate limit | ~~Sin rate limiting en rutas TOTP FNMT~~ (corregido en v1.6.0) | ✅ Resuelto |
+| AP-4 | RCE | Plantillas PHP inline en TransfersController | Critico |
 
 ---
 
@@ -76,158 +112,50 @@ Ver [AUDIT_REPORT.md](./AUDIT_REPORT.md#4-observaciones-especulativas-no-modific
 
 ### Nuevos servicios y endpoints implementados
 
-| Fecha | Componente | Descripcion | Tests |
-|-------|-----------|-------------|:-----:|
-| 2026-07-14 | `StorageService` | Almacena ciphertext cifrado en BD. Valida marachain-envelope v1 | 178 |
-| 2026-07-14 | `DocumentUploadController` | `POST /documents/upload` — recibe envelope + archivo cifrado multipart | 178 |
-| 2026-07-14 | `EvidenceService` | Registro automatico de eventos de negocio (DocumentSent, TransferAccepted, etc.) | 178 |
-| 2026-07-14 | `TransferController::accept/reject` | `POST /transfers/:id/accept` y `POST /transfers/:id/reject` con evidencias | 178 |
-| 2026-07-14 | `TransfersController` (web) | inbox/outbox usan `DocumentTransferModel` real (ya no mock data) | 178 |
-| 2026-07-14 | `BaseWebController` | `getAuthenticatedUserId()` via SHIELD → custom user linkage | 178 |
-| 2026-07-14 | Dropzone JS | Cifrado client-side via `MARACrypto.encryptDocument()` antes del upload | 178 |
-| 2026-07-14 | `.env.example` | Configuracion MySQL + SMTP + encryption keys | 178 |
-
-### Estado final MVP
-
-```text
-178 tests, 422 assertions — OK
-SQLite (dev) / MySQL (prod) / 6 servicios / 9 modelos / 16 controladores
-```
+| Fecha | Componente | Descripcion |
+|-------|-----------|-------------|
+| 2026-07-14 | `StorageService` | Almacena ciphertext cifrado en BD. Valida marachain-envelope v1 |
+| 2026-07-14 | `DocumentUploadController` | `POST /documents/upload` — envelope + archivo cifrado multipart |
+| 2026-07-14 | `EvidenceService` | Registro automatico de eventos de negocio |
+| 2026-07-14 | `TransferController::accept/reject` | Endpoints con evidencias |
+| 2026-07-14 | `TransfersController` (web) | inbox/outbox reales (no mock data) |
+| 2026-07-14 | `BaseWebController` | `getAuthenticatedUserId()` SHIELD → MARAChain linkage |
+| 2026-07-14 | Dropzone JS | Cifrado client-side via `MARACrypto.encryptDocument()` |
 
 ---
 
 ## v1.5.0 — Notification System Audit (2026-07-14)
 
-### Alcance
-
-- **Archivos revisados**: 14 nuevos archivos en `app/Notifications/`, `app/Commands/`, `app/Database/Migrations/`
-- **Capas auditadas**: Notification Providers (5), Value Objects (3), Commands (1), Migrations (2)
-- **Documento de referencia**: `docs/07_NOTIFICATIONS.md` — baseline de notificaciones aprobada
-
 ### Componentes implementados
 
-| Fecha | Componente | Descripcion | Tipo |
-|-------|-----------|-------------|------|
-| 2026-07-14 | `NotificationChannel` | Enum PHP 8.2+: EMAIL, WHATSAPP, TELEGRAM, SMS | Enum |
-| 2026-07-14 | `NotificationProviderInterface` | Contrato `send()`/`health()` para todos los canales | Interface |
-| 2026-07-14 | `EmailNotificationProvider` | Implementacion real SMTP via CI4 Email library | Provider |
-| 2026-07-14 | `WhatsAppNotificationProvider` | Stub preparado para cuenta global corporativa | Provider (stub) |
-| 2026-07-14 | `TelegramNotificationProvider` | Stub preparado para Bot API / MTProto | Provider (stub) |
-| 2026-07-14 | `SmsNotificationProvider` | Stub preparado para integracion SMS futura | Provider (stub) |
-| 2026-07-14 | `RecipientAddress` | Value object: canal + direccion del destinatario | Value Object |
-| 2026-07-14 | `NotificationMessage` | Value object: titulo, cuerpo, metadata del mensaje | Value Object |
-| 2026-07-14 | `NotificationResult` | Value object: estado, provider ID, error | Value Object |
-| 2026-07-14 | `NotificationsCommand` | CLI worker: `php spark notifications:send` | Command |
-| 2026-07-14 | `CreateNotificationRequestedTable` | Migracion: outbox transaccional con idempotencia | Migration |
-| 2026-07-14 | `CreateGlobalMessagingAccountsTable` | Migracion: cuentas globales por canal y entorno | Migration |
-
-### Verificacion de criterios de aceptacion (docs/07_NOTIFICATIONS.md §17)
-
-| Criterio | Verificado | Evidencia |
-|----------|:----------:|-----------|
-| Mensajes salen desde cuentas globales MARAChain | ✅ | `global_messaging_accounts` con `account_reference` |
-| Remitente no proporciona sesiones ni credenciales | ✅ | Sin campos de sesion en `RecipientAddress` ni `NotificationMessage` |
-| Datos del formulario son direcciones del destinatario | ✅ | `RecipientAddress` solo contiene `channel` + `address` |
-| Documento nunca se envia por canales de mensajeria | ✅ | `NotificationMessage` sin campos de documento/CID/claves |
-| Enlace exige autenticacion | ✅ | Diseñado sin token de acceso en el enlace |
-| Credenciales fuera de `wwwroot/` | ✅ | Ruta de referencia: `/var/lib/marachain/integrations/` |
-| Fallo de mensajeria no revierte transferencia | ✅ | Desacoplado: outbox asincrono, sin rollback de la transferencia |
-| Acuses no se presentan como lectura/aceptacion | ✅ | Semantica probatoria documentada en §10 |
-| Proveedores sustituibles | ✅ | `NotificationProviderInterface` con implementaciones intercambiables |
-| Canales desactivables por configuracion | ✅ | Estados `DISABLED`, `ERROR` en `global_messaging_accounts` |
-
-### Observaciones
-
-- Los stubs (WhatsApp, Telegram, SMS) requieren PoC antes de activacion en produccion
-- WhatsApp via SDK no oficial: riesgo de bloqueo documentado en §13
-- Telegram: definicion de mecanismo (Bot API vs MTProto) pendiente de ADR
-- SMS: seleccion de proveedor/gateway pendiente
-- Consentimiento y anti-abuso (§15) deben definirse antes de produccion
-
-### Archivos nuevos
-
-| Fichero | Lineas | Descripcion |
-|---------|--------|-------------|
-| `app/Notifications/NotificationChannel.php` | enum | Canales de notificacion |
-| `app/Notifications/NotificationProviderInterface.php` | interface | Contrato send/health |
-| `app/Notifications/NotificationMessage.php` | VO | Contenido del mensaje |
-| `app/Notifications/NotificationResult.php` | VO | Resultado del envio |
-| `app/Notifications/RecipientAddress.php` | VO | Direccion del destinatario |
-| `app/Notifications/Providers/EmailNotificationProvider.php` | provider | SMTP real |
-| `app/Notifications/Providers/WhatsAppNotificationProvider.php` | stub | Placeholder WhatsApp |
-| `app/Notifications/Providers/TelegramNotificationProvider.php` | stub | Placeholder Telegram |
-| `app/Notifications/Providers/SmsNotificationProvider.php` | stub | Placeholder SMS |
-| `app/Commands/NotificationsCommand.php` | command | CLI worker multi-canal |
-| `app/Database/Migrations/2026-07-14-500000_*.php` | migration | Outbox transaccional |
-| `app/Database/Migrations/2026-07-14-600000_*.php` | migration | Cuentas globales |
-
-### Referencias
-
-- CHANGELOG: [CHANGELOG.md#150---2026-07-14](./CHANGELOG.md#150---2026-07-14)
-- Diseno de notificaciones: [docs/07_NOTIFICATIONS.md](./docs/07_NOTIFICATIONS.md)
-- Version: [VERSION.md](./VERSION.md)
+| Fecha | Componente | Descripcion |
+|-------|-----------|-------------|
+| 2026-07-14 | `NotificationChannel` | Enum PHP 8.2+: EMAIL, WHATSAPP, TELEGRAM, SMS |
+| 2026-07-14 | `NotificationProviderInterface` | Contrato `send()`/`health()` |
+| 2026-07-14 | `EmailNotificationProvider` | Implementacion real SMTP |
+| 2026-07-14 | `WhatsAppNotificationProvider` | Stub para cuenta global corporativa |
+| 2026-07-14 | `TelegramNotificationProvider` | Stub para Bot API / MTProto |
+| 2026-07-14 | `SmsNotificationProvider` | Stub para integracion SMS |
+| 2026-07-14 | `NotificationsCommand` | CLI worker: `php spark notifications:send` |
+| 2026-07-14 | Outbox + Global accounts | Migraciones 500000 y 600000 |
 
 ---
 
 ## v1.6.0 — Settings, api-auth & Notification Model Audit (2026-07-16)
 
-### Alcance
-
-- **Archivos revisados**: 12 nuevos/modificados en `app/Database/Migrations/`, `app/Models/`, `app/Config/`, `tests/`
-- **Capas auditadas**: Migrations (2), Models (1), Config/Filters (1), Tests (10)
-
 ### Componentes implementados
 
-| Fecha | Componente | Descripcion | Tipo |
-|-------|-----------|-------------|------|
-| 2026-07-16 | `CreateSettingsTable` | Migracion: tabla `settings` para configuracion SHIELD en BD | Migration |
-| 2026-07-16 | `AddContextColumn` | Migracion: columna `context` para segregacion staging/prod | Migration |
-| 2026-07-16 | `NotificationRequestedModel` | Modelo: outbox transaccional con estados, idempotencia, circuit breaker | Model |
-| 2026-07-16 | `api-auth` filter | Filtro: protege TODAS las rutas API REST con SHIELD SessionAuth | Filter |
-| 2026-07-16 | `Routes.php` (reorg) | Reorganizacion: grupos Health, Auth (rate-limited), Web (session), API (api-auth) | Config |
-| 2026-07-16 | Service tests ×5 | StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService | Test |
-| 2026-07-16 | Web tests ×5 | AuthController, ContactsWeb, TransfersWeb, HealthController, LedgerControllerApi | Test |
+| Fecha | Componente | Descripcion |
+|-------|-----------|-------------|
+| 2026-07-16 | `CreateSettingsTable` | Tabla `settings` para configuracion SHIELD en BD |
+| 2026-07-16 | `AddContextColumn` | Columna `context` para segregacion staging/prod |
+| 2026-07-16 | `NotificationRequestedModel` | Outbox transaccional con estados, idempotencia, circuit breaker |
+| 2026-07-16 | `api-auth` filter | Protege TODAS las rutas API REST con SHIELD SessionAuth |
+| 2026-07-16 | Service tests ×5 | StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService |
+| 2026-07-16 | Web tests ×5 | AuthController, ContactsWeb, TransfersWeb, HealthController, LedgerControllerApi |
 
 ### Correcciones de seguridad aplicadas
 
 | ID | Categoria | Descripcion | Origen |
 |----|-----------|-------------|--------|
-| AP-3 | Rate limiting | `throttle:auth` aplicado a rutas FNMT TOTP (POST totp-setup, POST totp-verify) | Audit v1.2.1 |
-
-### Cambios en API
-
-- **Breaking change conceptual**: rutas REST ahora requieren sesion SHIELD (`api-auth` filter). Clientes API deben enviar cookie de sesion.
-- Health endpoint (`/health`) permanece publico sin autenticacion.
-- Rutas FNMT TOTP ahora rate-limited (6 req/min).
-
-### Totales actualizados
-
-```text
-Migraciones: 14 → 16 (nuevas: settings table, context column)
-Modelos:     9 → 10 (nuevo: NotificationRequestedModel)
-Tests:       178/422 → ~220/~500 (nuevos: 5 service + 5 web controller tests)
-Archivos test: 22 → 35
-```
-
-### Archivos nuevos
-
-| Fichero | Descripcion |
-|---------|-------------|
-| `app/Database/Migrations/2026-07-14-700000_CreateSettingsTable.php` | SHIELD Settings DB table |
-| `app/Database/Migrations/2026-07-14-700001_AddContextColumn.php` | Settings context column |
-| `app/Models/NotificationRequestedModel.php` | Outbox persistence model |
-| `tests/Unit/Services/StorageServiceTest.php` | StorageService tests |
-| `tests/Unit/Services/FnmtIdentityProviderTest.php` | FNMT identity tests |
-| `tests/Unit/Services/EvidenceServiceTest.php` | Evidence recording tests |
-| `tests/Unit/Services/X509ServiceTest.php` | X.509 parsing tests |
-| `tests/Unit/Services/EncryptionServiceTest.php` | Encryption tests |
-| `tests/Unit/Controllers/AuthControllerTest.php` | Auth web tests |
-| `tests/Unit/Controllers/ContactsWebTest.php` | Contacts web tests |
-| `tests/Unit/Controllers/TransfersWebTest.php` | Transfers web tests |
-| `tests/Unit/Controllers/HealthControllerTest.php` | Health endpoint tests |
-| `tests/Unit/Controllers/LedgerControllerApiTest.php` | Ledger API tests |
-
-### Referencias
-
-- CHANGELOG: [CHANGELOG.md#160---2026-07-16](./CHANGELOG.md#160---2026-07-16)
-- Version: [VERSION.md](./VERSION.md)
+| AP-3 | Rate limiting | `throttle:auth` aplicado a rutas FNMT TOTP | Audit v1.2.1 |

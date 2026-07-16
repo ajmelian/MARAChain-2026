@@ -10,14 +10,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- WebCrypto client-side encryption for document uploads (Dropzone integration complete, pending full E2E flow)
 - IPFS private cluster storage integration
+- Authentication hardening (P1-1: FNMT login notification, P1-2: TOTP reuse prevention, P1-3: SHIELD session config compliance)
+- Document transfer complete flow (P1-4: detail view mock data, P1-5: accept/reject web UI)
+- Transactional notification outbox (P1-7: atomic insert with business operations)
+- Ed25519 signatures for ledger blocks (P2-5: replace placeholder HMAC)
+- Merkle proofs for evidence inclusion verification (P2-6)
+- CSP hardening: remove `unsafe-inline` (P2-1)
+- Additional security headers: Cross-Origin-Opener-Policy, Cross-Origin-Embedder-Policy (P2-2)
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
+- IPFS worker (`Commands/IpfsReconcile.php`)
+- Queue worker for async operations (P2-9)
+- SonarQube SAST integration (P2-16)
 - JWT/API keys for REST API authentication
 - CSRF protection on all web forms (AP-1 from audit)
 - Session fixation fix in FNMT flow (AP-2 from audit)
 - Replace inline PHP template strings with view files (AP-4 from audit)
+- ADR documents in `docs/adr/` directory (P3-7)
+
+---
+
+## [1.7.0] - 2026-07-16
+
+### Added
+- **TimestampService** (`app/Services/TimestampService.php`): implementacion del servicio de sellado de tiempo confiable contra `TimestampProviderInterface`.
+- **TimestampController** (`app/Controllers/TimestampController.php`): 12th REST controller con endpoints de sellado de tiempo.
+- **Migration 800000** (`2026-07-14-800000_AddIpfsAndBlockchainIds.php`): columnas `ipfs_cid` y `blockchain_anchor_id` para almacenamiento distribuido y anclaje DLT futuro.
+
+### Changed
+- **OpenSpec `.state.yaml` actualizado**: 64 de 66 tareas marcadas como `completed`. Solo tarea 065 (E2E Tests) permanece `pending` y tarea 066 (Documentacion) como `in_progress`.
+- **Fase 4 (Validacion) finalizada**: los 9 grupos de reglas de validacion y 4 CustomRules confirmados como completados en el state tracker.
+- **Fase 5 (Controller Tests) finalizada**: 15 archivos de test de controladores confirmados.
+- **Fase 6 (Controllers) finalizada**: 14 REST controllers + 6 Web controllers confirmados.
+- **Fase 7 (Security) finalizada**: SecurityHeaders filter + Throttle filter + api-auth filter confirmados.
+- **Recuento de migraciones actualizado**: 17 migraciones (antes 16). Nueva: `800000_AddIpfsAndBlockchainIds`.
+- **Recuento de servicios actualizado**: 11 servicios (antes 10). Nuevo: `TimestampService`.
+- **Recuento de controladores REST actualizado**: 12 REST (antes 11). Nuevo: `TimestampController`.
+- **Totales de tests verificados**: ~500 assertions en 33 archivos de test (9 model + 15 controller + 6 service + 3 otros).
+- Todas las referencias de documentacion cruzada actualizadas y verificadas para consistencia.
+
+### Fixed
+- **Documentacion inconsistente** corregida en README.md, ARCHITECTURE.md, INSTALL.md: conteos de migraciones (16→17), controladores REST (11→12), servicios (10→11), tests (→33 archivos).
+- **CHANGELOG.md** sincronizado con VERSION.md (ambos a 1.7.0).
+- **AUDITORY.md** actualizado con entrada de auditoria de documentacion v1.7.0.
+- **CONFIGURATION.md** y **SECURITY.md** version headers actualizados a 1.7.0.
+- **INSTALL.md** conteo de tests corregido y comandos actualizados.
+
+### Security
+- Documentation-only release; sin cambios en codigo de seguridad.
+- Todas las politicas de seguridad en SECURITY.md permanecen vigentes.
 
 ---
 

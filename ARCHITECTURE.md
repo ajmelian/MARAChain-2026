@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.6.0 | **Date:** 2026-07-16 | **Status:** MVP (Pre-alpha)
+> **Version:** 1.7.0 | **Date:** 2026-07-16 | **Status:** MVP (Pre-alpha)
 
 ## Overview
 
@@ -41,6 +41,7 @@ Domain → sin dependencia de framework
 | ADR-017 | `EvidenceService` como servicio de dominio | Registro de eventos de negocio (`DocumentSent`, `TransferAccepted`, etc.) centralizado. Cada evento incluye `aggregateType`, `aggregateId`, `eventType` y `payloadJson`. Append-only con verificacion de integridad via LedgerService |
 | ADR-018 | `Helpers/Uuid.php` — DRY UUID generation | Reemplaza `generateUuidV4()` duplicada en 10 archivos por una funcion helper centralizada `generate_uuid_v4()`. Cargada via `BaseController::$helpers = ['uuid']` |
 | ADR-019 | Sistema de notificaciones multi-canal con Provider Pattern | Notificaciones desacopladas por canal (Email, WhatsApp, Telegram, SMS) mediante `NotificationProviderInterface`. Cada canal es un provider independiente con contrato `send()`/`health()`. Outbox transaccional (`notification_requested`) con idempotencia, reintentos con backoff, circuit breaker, y dead-letter. Cuentas globales corporativas (`global_messaging_accounts`) gestionadas por canal y entorno. Los secretos de proveedores residen fuera de `wwwroot/` (`/var/lib/marachain/integrations/`). Stubs para canales futuros permiten desarrollo incremental sin bloquear el nucleo |
+| ADR-020 | Migracion `800000_AddIpfsAndBlockchainIds` — columnas preparatorias para IPFS y DLT | Anade `ipfs_cid` (VARCHAR 128) y `blockchain_anchor_id` (VARCHAR 256) como columnas nullable. Permite desarrollo futuro de almacenamiento IPFS y anclaje blockchain sin nueva migracion de schema. Las columnas son backward-compatible (NULL por defecto) |
 
 ## Component Diagram
 
@@ -61,15 +62,16 @@ Domain → sin dependencia de framework
 │  │ LedgerCtrl       │  └──────┬───────┘    ┌──────────────────┐         │
 │  │ ContactCtrl      │         │            │    Models         │         │
 │  │ NotifCtrl        │         │            │ (Query Builder)   │         │
+│  │ TimestampCtrl    │         │            └────────┬─────────┘         │
 │  │ HealthCtrl       │         │            └────────┬─────────┘         │
-│  └────────┬─────────┘         │            └────────┬─────────┘         │
-│           │                   │                     │                   │
-│           ▼                   │                     ▼                   │
-│  ┌────────────────┐           │            ┌──────────────────┐         │
-│  │   Validation   │           │            │   Migrations     │         │
-│  │   9 groups +   │           │            │  (CI4 Forge)     │         │
-│  │   CustomRules  │           │            │  16 migrations   │         │
-│  └────────────────┘           │            └────────┬─────────┘         │
+│  └────────┬─────────┘         │                     │                   │
+│           │                   │                     ▼                   │
+│           ▼                   │            ┌──────────────────┐         │
+│  ┌────────────────┐           │            │   Migrations     │         │
+│  │   Validation   │           │            │  (CI4 Forge)     │         │
+│  │   9 groups +   │           │            │  17 migrations   │         │
+│  │   CustomRules  │           │            └────────┬─────────┘         │
+│  └────────────────┘           │                     │                   │
 │                               │                     │                   │
 │           ┌───────────────────┼─────────────────────┼───────────┐      │
 │           │           Services Layer                │           │      │
@@ -81,7 +83,8 @@ Domain → sin dependencia de framework
 │           │  X509Service                │    Entities      │    │      │
 │           │  StorageService             │  9 entities     │    │      │
 │           │  EvidenceService            │  (CI4 Entity)   │    │      │
-│           │  TimestampProviderInterface  └──────────────────┘    │      │
+│           │  TimestampService            └──────────────────┘    │      │
+│           │  TimestampProviderInterface                          │      │
 │           │  LedgerAnchorInterface                               │      │
 │           │                                                     │      │
 │           │  ┌─ Notification Layer ──────────┐                   │      │
@@ -138,20 +141,20 @@ Domain → sin dependencia de framework
    │  charset utf8mb4
    │  Ciphertext almacenado en columna documents.ciphertext
    ▼
-6. IPFS (documentos cifrados)
+6. IPFS (documentos cifrados) — preparado via ipfs_cid column
    │  Solo el destinatario puede descifrar
    │  (clave envuelta en sobre criptografico)
    ▼
 7. Ledger (evidencias append-only)
-    │  Bloques con Merkle tree
-    │  Firmas criptograficas por bloque
-    │  Evidencias registradas via EvidenceService → LedgerService
-    ▼
+   │  Bloques con Merkle tree
+   │  Firmas criptograficas por bloque
+   │  Evidencias registradas via EvidenceService → LedgerService
+   ▼
 8. Notifications (multi-canal, outbox transaccional)
-    │  notification_requested → CLI worker
-    │  Provider pattern: Email (SMTP), WhatsApp, Telegram, SMS
-    │  Cuentas globales corporativas (global_messaging_accounts)
-    │  Secretos en /var/lib/marachain/integrations/
+   │  notification_requested → CLI worker
+   │  Provider pattern: Email (SMTP), WhatsApp, Telegram, SMS
+   │  Cuentas globales corporativas (global_messaging_accounts)
+   │  Secretos en /var/lib/marachain/integrations/
 ```
 
 ## Directory Tree (`wwwroot/`)
@@ -175,7 +178,7 @@ wwwroot/
 │   │   │   └── testing.php            # Entorno testing
 │   │   ├── Database.php               # Conexiones: default (MySQL), tests (SQLite)
 │   │   ├── Filters.php                # SecurityHeaders global after, csrf, throttle
-│   │   ├── Routes.php                 # 55+ rutas (REST + Web + Health)
+│   │   ├── Routes.php                 # 70+ rutas (REST + Web + Health)
 │   │   ├── Settings.php               # Configuracion SHIELD Settings
 │   │   ├── Validation.php             # 9 grupos de validacion
 │   │   ├── Constants.php              # Constantes del sistema
@@ -197,6 +200,7 @@ wwwroot/
 │   │   ├── LedgerController.php       # index, show, verify (3 endpoints)
 │   │   ├── ContactController.php      # CRUD (5 endpoints)
 │   │   ├── NotificationController.php # index, show (2 endpoints)
+│   │   ├── TimestampController.php    # request, show (2 endpoints)
 │   │   └── Web/
 │   │       ├── AuthController.php     # login, register, logout (SHIELD)
 │   │       ├── BaseWebController.php  # render(), shared layout helpers
@@ -214,10 +218,15 @@ wwwroot/
 │   │   │   ├── 2026-07-13-100005_CreateEvidencesTable.php
 │   │   │   ├── 2026-07-13-100006_CreateLedgerBlocksTable.php
 │   │   │   ├── 2026-07-13-100007_CreateContactsTable.php
-│   │   │   └── 2026-07-13-100008_CreateNotificationsTable.php
+│   │   │   ├── 2026-07-13-100008_CreateNotificationsTable.php
 │   │   │   ├── 2026-07-13-200000_create_auth_tables.php
 │   │   │   ├── 2026-07-14-300000_create_shield_tables.php
-│   │   │   └── 2026-07-14-400000_add_shield_user_id_to_users.php
+│   │   │   ├── 2026-07-14-400000_add_shield_user_id_to_users.php
+│   │   │   ├── 2026-07-14-500000_CreateNotificationRequestedTable.php
+│   │   │   ├── 2026-07-14-600000_CreateGlobalMessagingAccountsTable.php
+│   │   │   ├── 2026-07-14-700000_CreateSettingsTable.php
+│   │   │   ├── 2026-07-14-700001_AddContextColumn.php
+│   │   │   └── 2026-07-14-800000_AddIpfsAndBlockchainIds.php
 │   │   └── Seeds/
 │   │       └── DatabaseSeeder.php
 │   ├── Entities/
@@ -234,7 +243,7 @@ wwwroot/
 │   │   ├── SecurityHeaders.php        # 7 cabeceras OWASP
 │   │   └── Throttle.php               # Token bucket rate limiter
 │   ├── Helpers/
-│   │   └── Uuid.php                    # generate_uuid_v4() — DRY UUID generation
+│   │   └── Uuid.php                   # generate_uuid_v4() — DRY UUID generation
 │   ├── Language/
 │   │   └── en/
 │   │       └── Validation.php         # Mensajes de error en ingles
@@ -258,36 +267,38 @@ wwwroot/
 │   │   └── Providers/
 │   │       ├── EmailNotificationProvider.php       # Implementacion real SMTP
 │   │       ├── WhatsAppNotificationProvider.php    # Stub para cuenta global WhatsApp
-│   │       ├── TelegramNotificationProvider.php    # Stub para cuenta global Telegram
-│   │       └── SmsNotificationProvider.php         # Stub para integracion SMS futura
+│   │       ├── TelegramNotificationProvider.php    # Stub para integracion Telegram
+│   │       └── SmsNotificationProvider.php         # Stub para integracion SMS
 │   ├── Services/
-│   │   ├── EncryptionService.php      # AES-256-GCM encrypt/decrypt
+│   │   ├── EncryptionService.php       # AES-256-GCM encrypt/decrypt
 │   │   ├── EvidenceService.php         # Automatic business event recording
-│   │   ├── FnmtIdentityProvider.php   # FNMT certificate identity resolution
+│   │   ├── FnmtIdentityProvider.php    # FNMT certificate identity resolution
 │   │   ├── IdentityProviderInterface.php # Identity provider abstraction
-│   │   ├── LedgerAnchorInterface.php  # External blockchain anchoring abstraction
-│   │   ├── LedgerService.php          # Block creation, Merkle tree, chain verification
+│   │   ├── LedgerAnchorInterface.php   # External blockchain anchoring abstraction
+│   │   ├── LedgerService.php           # Block creation, Merkle tree, chain verification
 │   │   ├── SignatureProviderInterface.php # Signature provider abstraction
-│   │   ├── StorageService.php         # Ciphertext storage with envelope validation
+│   │   ├── StorageService.php          # Ciphertext storage with envelope validation
 │   │   ├── TimestampProviderInterface.php # Trusted timestamping abstraction
-│   │   └── X509Service.php            # X.509 certificate parsing
+│   │   ├── TimestampService.php        # Timestamp service implementation
+│   │   └── X509Service.php             # X.509 certificate parsing
 │   └── Validation/
-│       └── CustomRules.php            # valid_tax_id, valid_phone_e164, valid_uuid, valid_hex
+│       └── CustomRules.php             # valid_tax_id, valid_phone_e164, valid_uuid, valid_hex
 ├── tests/
 │   ├── Unit/
-│   │   ├── Controllers/               # 9 controller test files
-│   │   ├── Models/                    # 9 model test files
-│   │   └── Services/
-│   │       └── LedgerServiceTest.php  # 14 tests: Merkle tree, genesis, sealing, verification
+│   │   ├── Controllers/                # 15 controller test files
+│   │   ├── Models/                     # 9 model test files
+│   │   └── Services/                   # 6 service test files
 │   ├── unit/
 │   │   └── HealthTest.php
+│   ├── database/
+│   ├── session/
 │   └── _support/
-├── public/                            # Document root (index.php)
-├── writable/                          # Logs, cache, sesiones
+├── public/                             # Document root (index.php)
+├── writable/                           # Logs, cache, sesiones
 ├── composer.json
 ├── phpunit.xml.dist
-├── env                                # .env template
-└── spark                              # CLI entry point
+├── env                                 # .env template
+└── spark                               # CLI entry point
 ```
 
 ## Layer Descriptions
@@ -312,6 +323,7 @@ Definen el esquema de base de datos usando CI4 Forge:
 - `VARCHAR(254)` para emails (RFC 5321)
 - `TINYINT(1)` para booleanos
 - Foreign keys con `ON DELETE CASCADE` / `ON DELETE RESTRICT`
+- `VARCHAR(128)` para `ipfs_cid` y `VARCHAR(256)` para `blockchain_anchor_id` (preparatorio)
 
 ### Models (`app/Models/`)
 
@@ -333,29 +345,6 @@ Capa de presentacion REST. Extienden `BaseController`:
 - Convierten `camelCase` → `snake_case` via `BaseController::camelToSnake()`
 - Cada controlador tiene su propio model inyectado via `model()` helper
 
-### Config (`app/Config/`)
-
-- **Routes.php**: mapeo de URLs a controladores (24+ endpoints)
-- **Validation.php**: 9 grupos de reglas de validacion
-- **Filters.php**: SecurityHeaders como filtro global `after`
-- **Database.php**: conexion `default` (MySQL) + `tests` (SQLite :memory:)
-- **Boot/**: configuracion por entorno (development/testing/production)
-
-### Validation (`app/Validation/`)
-
-- **CustomRules.php**: `valid_tax_id` (NIF/NIE/CIF), `valid_phone_e164`, `valid_hex`, `valid_uuid`
-- Integrado como `$ruleSets` en `Config\Validation`
-
-### Filters (`app/Filters/`)
-
-- **SecurityHeaders.php**: aplica 7 cabeceras OWASP en cada respuesta HTTP
-- **Throttle.php**: token bucket rate limiter basado en archivos. Limites configurables por grupo de ruta (auth: 6 req/min, api: 60 req/min). Fingerprint via SHA1(IP + path). Retorna HTTP 429 con header `retry_after`.
-- Registrado como alias `security` y aplicado globalmente en `after`
-
-### Helpers (`app/Helpers/`)
-
-- **Uuid.php**: `generate_uuid_v4()` — generacion centralizada de UUIDs RFC 4122 via `random_bytes(16)`. Reemplaza el metodo duplicado en 10 archivos. Cargado via `BaseController::$helpers = ['uuid']`.
-
 ### Services (`app/Services/`)
 
 Capa de abstraccion de proveedores externos (patron Ports & Adapters):
@@ -364,11 +353,12 @@ Capa de abstraccion de proveedores externos (patron Ports & Adapters):
   - `FnmtIdentityProvider` — implementacion con certificados FNMT via mTLS
 - **SignatureProviderInterface** — abstraccion de proveedor de firma electronica
 - **TimestampProviderInterface** — abstraccion de sellado de tiempo confiable
+  - `TimestampService` — implementacion del servicio de timestamping
 - **LedgerAnchorInterface** — abstraccion de anclaje en DLT externa
 - **EncryptionService** — cifrado/descifrado AES-256-GCM (AEAD) con claves de 32 bytes
-- **StorageService** — almacenamiento de ciphertext en BD con validacion de envelope `marachain-envelope v1`. Metodos `store()` y `retrieve()`. Valida integridad AEAD (tag) antes de persistir. Desacopla el cifrado (cliente) del almacenamiento (servidor)
-- **EvidenceService** — registro automatico de eventos de negocio (`DocumentSent`, `TransferAccepted`, `TransferRejected`). Metodo `record()` con soporte para payload JSON y aggregate references. Append-only. Integrado con LedgerService para sellado periodico
-- **LedgerService** — creacion de bloques, arbol Merkle, verificacion de integridad de cadena. Usa transacciones de BD para atomicidad (sealBlock)
+- **StorageService** — almacenamiento de ciphertext en BD con validacion de envelope `marachain-envelope v1`
+- **EvidenceService** — registro automatico de eventos de negocio
+- **LedgerService** — creacion de bloques, arbol Merkle, verificacion de integridad de cadena
 - **X509Service** — parseo de certificados X.509, extraccion de DN, resolucion de identidad
 
 Los servicios no dependen de HTTP ni de CI4 Controllers. Reciben dependencias por constructor. Testeables con mocks.
@@ -387,20 +377,12 @@ Comandos CLI accesibles via `php spark`:
 
 Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
 
-- **AuthController** — login, register, logout via SHIELD. Con validacion frontend + backend. Rate limited via `throttle:auth`
+- **AuthController** — login, register, logout via SHIELD
 - **BaseWebController** — renderizado compartido, helpers de layout
 - **ContactsController** — CRUD de contactos con vistas HTML
-- **FnmtController** — autenticacion con certificado FNMT (mTLS) + TOTP. AES-256-GCM para secretos TOTP. Usa `$this->request->getServer()` para prevenir inyeccion de cabeceras SSL
+- **FnmtController** — autenticacion con certificado FNMT (mTLS) + TOTP
 - **ProfileController** — pagina de perfil de usuario
 - **TransfersController** — bandeja de entrada, salida, creacion de transferencias
-
-Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API REST.
-
-### Filters (`app/Filters/`)
-
-- **SecurityHeaders.php**: aplica 7 cabeceras OWASP en cada respuesta HTTP
-- **Throttle.php**: token bucket rate limiter basado en archivos. Limites configurables por grupo de ruta (auth: 6 req/min, api: 60 req/min). Fingerprint via SHA1(IP + path). Retorna HTTP 429 con header `retry_after`.
-- Registrado como alias `security` y `throttle`
 
 ## API Design
 
@@ -411,17 +393,17 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | Metodo | Ruta | Controlador | Descripcion |
 |--------|------|-------------|-------------|
 | GET | `/` | `Home::index` | Welcome page |
-| GET | `/health` | `HealthController::index` | Health check (publico, rate-limited implícito) |
+| GET | `/health` | `HealthController::index` | Health check (publico) |
 | **Auth (Web — rate-limited via throttle:auth)** | | | |
 | GET | `/login` | `Web\AuthController::login` | Login form |
 | POST | `/login` | `Web\AuthController::login` | Process login |
 | GET | `/register` | `Web\AuthController::register` | Register form |
 | POST | `/register` | `Web\AuthController::register` | Process registration |
 | GET/POST | `/logout` | `Web\AuthController::logout` | Logout |
-| **FNMT Auth (Web — TOTP routes rate-limited)** | | | |
+| **FNMT Auth (Web)** | | | |
 | GET | `/auth/fnmt` | `Web\FnmtController::login` | Login con certificado FNMT (mTLS) |
-| GET/POST | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP (POST con throttle:auth) |
-| GET/POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP (POST con throttle:auth) |
+| GET/POST | `/auth/fnmt/totp-setup` | `Web\FnmtController::totpSetup` | Configurar TOTP |
+| GET/POST | `/auth/fnmt/totp-verify` | `Web\FnmtController::totpVerify` | Verificar TOTP |
 | **Users (api-auth)** | | | |
 | GET | `/users` | `UserController::index` | Listar usuarios |
 | GET | `/users/{id}` | `UserController::show` | Ver usuario |
@@ -469,6 +451,9 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | **Notifications (api-auth)** | | | |
 | GET | `/notifications` | `NotificationController::index` | Listar notificaciones |
 | GET | `/notifications/{id}` | `NotificationController::show` | Ver notificacion |
+| **Timestamp (api-auth)** | | | |
+| POST | `/timestamps` | `TimestampController::request` | Solicitar sello de tiempo |
+| GET | `/timestamps/{id}` | `TimestampController::show` | Ver sello de tiempo |
 | **Transfers (Web — session-protected)** | | | |
 | GET | `/inbox` | `Web\TransfersController::inbox` | Bandeja de entrada |
 | GET | `/outbox` | `Web\TransfersController::outbox` | Bandeja de salida |
@@ -485,7 +470,7 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | GET | `/profile` | `Web\ProfileController::index` | Perfil de usuario |
 | GET | `/totp/setup` | `Web\AuthController::totpSetup` | Configurar TOTP |
 
-**Total: 70+ rutas registradas (37+ REST API + 1 health + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 1 home)**
+**Total: 70+ rutas registradas (39+ REST API + 1 health + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 2 timestamp + 1 home)**
 
 ## Database
 
@@ -508,6 +493,8 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 | 13 | `global_messaging_accounts` | Cuentas globales por canal | `2026-07-14-600000` |
 | 14 | `settings` | Configuracion SHIELD (class/key/value) | `2026-07-14-700000` |
 | 15 | `settings.context` | Columna de segregacion staging/prod | `2026-07-14-700001` |
+| 16 | `documents.ipfs_cid` | Columna para IPFS CID | `2026-07-14-800000` |
+| 17 | `documents.blockchain_anchor_id` | Columna para anclaje DLT | `2026-07-14-800000` |
 
 ### Caracteristicas del esquema
 
@@ -517,26 +504,21 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 - **Charset**: `utf8mb4` con collation `utf8mb4_general_ci`
 - **Engine**: `InnoDB` (soporte transaccional)
 - **Unique keys**: `email` (users), `tax_id_hmac` (users), `idempotency_key` (transfers)
-- **Indexes**: en columnas de busqueda frecuente (`status`, `identity_type`, `event_type`, `aggregate_id`)
 
 ## Security Architecture
 
 - **SHIELD**: autenticacion session-based, autorizacion por grupos, proteccion CSRF
-- **api-auth filter**: filtro aplicado a todas las rutas API REST (users, devices, documents, transfers, signatures, evidence, ledger, contacts, notifications). Requiere sesion SHIELD activa con permisos de grupo.
+- **api-auth filter**: filtro aplicado a todas las rutas API REST. Requiere sesion SHIELD activa con permisos de grupo
 - **SecurityHeaders**: filtro global `after` que aplica 7 cabeceras OWASP
 - **Throttle**: rate limiting configurable (token bucket basado en archivos)
 - **forcehttps**: filtro global `before` (redireccion HTTP → HTTPS)
 - **Cifrado AEAD**: NIF/NIE cifrado en reposo (AES-256-GCM); busqueda via HMAC determinista
-- **AES-256-GCM para TOTP**: secretos TOTP cifrados reversiblemente con autenticacion (reemplaza HMAC unidireccional)
-- **WebCrypto**: cifrado extremo a extremo de documentos en navegador (planificado)
-- **TOTP**: segundo factor con bloqueo atomico tras 5 fallos (30 min). `SET col = col + 1` evita TOCTOU
+- **AES-256-GCM para TOTP**: secretos TOTP cifrados reversiblemente
+- **WebCrypto**: cifrado extremo a extremo de documentos en navegador
+- **TOTP**: segundo factor con bloqueo atomico tras 5 fallos (30 min)
 - **UUID v4**: evita enumeracion de IDs
 - **Query Builder**: previene SQL injection (sin raw SQL)
-- **Transacciones BD**: operaciones multi-tabla atomicas (LedgerService, AuthController)
-- **Frontera de confianza**: `$this->request->getServer()` en lugar de `$_SERVER` (previene inyeccion de cabeceras SSL)
-- **Sin clave maestra**: modelo _only-4-your-eyes_
-- **Sin hardcoding de secretos**: variables `encryption.key` y `encryption.hmacKey` solo desde `.env`
-- **Settings table**: configuracion SHIELD persistida en BD con segregacion por `context` (staging/prod)
+- **Transacciones BD**: operaciones multi-tabla atomicas
 
 ## Testing
 
@@ -549,22 +531,12 @@ Rutas web protegidas con filtro `session` de SHIELD. Separadas de las rutas API 
 
 ### Suite actual
 
-- **~220 tests** en 35 ficheros de test
+- **33 archivos de test**: 9 model + 15 controller + 6 service + 3 otros
 - **~500 assertions**
-- **9 model test files** en `tests/Unit/Models/`
-- **15 controller test files** en `tests/Unit/Controllers/`
-- **5 service test files** en `tests/Unit/Services/` (LedgerService, StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService)
-- **2 health tests** en `tests/unit/`
-- **3 session/database/support tests**
-- **Database tests**: `tests/database/ExampleDatabaseTest.php`
-
-### Tests de integridad del Ledger (14 tests en LedgerServiceTest)
-
-- Merkle tree: 6 tests (single leaf, 2/3/4 leaves, empty, deterministic)
-- Genesis block: 2 tests (creacion, doble creacion lanza excepcion)
-- Block sealing: 2 tests (sin evidencia → null, con evidencia → bloque #2)
-- Chain verification: 2 tests (cadena vacia, genesis solo, genesis+sellado)
-- Tamper detection: 1 test (hash manipulado detectado)
+- **6 service tests**: LedgerService, StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService
+- **15 controller tests**: 9 REST + 5 Web + Health
+- **9 model tests**: todos los modelos del dominio
+- **14 LedgerService tests**: Merkle tree, genesis, sealing, chain verification, tamper detection
 
 ### Ejecucion
 
@@ -601,7 +573,7 @@ php vendor/bin/phpunit --coverage-text    # Con cobertura
 │  └─────────────────────┘                  │  │
 │                                               │
 │  ┌─────────────────────────────────────────┐  │
-│  │  IPFS (cluster privado)                 │  │
+│  │  IPFS (cluster privado) — futuro        │  │
 │  └─────────────────────────────────────────┘  │
 └───────────────────────────────────────────────┘
 ```
@@ -610,5 +582,3 @@ php vendor/bin/phpunit --coverage-text    # Con cobertura
 - **Staging**: `/var/www/staging/` con datos anonimizados
 - **Produccion**: `/var/www/prod/` con backup de BD antes de migrar
 - **Rollback**: `git checkout` a tag anterior + restore BD
-- **Nginx mTLS**: configuracion en `nginx-fnmt-mtls.conf` — `ssl_verify_client optional` global, obligatorio en `/auth/fnmt`
-- **Deploy scripts**: `scripts/deploy-staging.sh` y `scripts/deploy-prod.sh` para releases atomicas via symlink `current/`

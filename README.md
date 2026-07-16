@@ -1,7 +1,7 @@
 # MARAChain
 
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com/ajmelian/MARAChain-2026)
-[![Version](https://img.shields.io/badge/version-1.6.0-blue)](./VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue)](./VERSION.md)
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4623?style=flat)](https://codeigniter.com/)
 [![SHIELD](https://img.shields.io/badge/SHIELD-1.3-EE4623?style=flat)](https://shield.codeigniter.com/)
@@ -67,7 +67,7 @@ Identificacion (FNMT)
 
 ## Autor
 
-**Aythami Melián Perdomo** — Arquitecto de Software Seguro especializado en IAM, autenticación fuerte y API Security.
+**Aythami Melian Perdomo** — Arquitecto de Software Seguro especializado en IAM, autenticacion fuerte y API Security.
 
 | | |
 |---|---|
@@ -100,8 +100,8 @@ Identificacion (FNMT)
 
 ```bash
 # 1. Clonar repositorio
-git clone git@github.com:your-org/marachain.git
-cd marachain/wwwroot
+git clone git@github.com:ajmelian/MARAChain-2026.git
+cd MARAChain/wwwroot
 
 # 2. Instalar dependencias
 composer install
@@ -126,7 +126,7 @@ php vendor/bin/phpunit
 ## Estructura del Proyecto
 
 ```
-marachain/
+MARAChain/
 ├── docs/                              # Documentos del cliente (baseline)
 │   ├── 00_FUENTE_DE_VERDAD.md
 │   ├── 01_RESUMEN_COMPLETO.md
@@ -134,14 +134,15 @@ marachain/
 │   ├── 03_PROYECTO_TECNICO.md
 │   ├── 04_ARCHITECTURE.md
 │   ├── 05_CASOS_DE_USO.md
-│   └── 06_FRONTEND_DESIGN.md
-├── .opencode/openspec/                # Especificacion SDD + Roadmap
+│   ├── 06_FRONTEND_DESIGN.md
+│   └── 07_NOTIFICATIONS.md
+├── .opencode/openspec/                # Especificacion SDD + Roadmap + State
 ├── wwwroot/                           # Aplicacion CodeIgniter 4
 │   ├── app/
 │   │   ├── Commands/                  # 4 comandos CLI
 │   │   ├── Config/                    # Routes, Validation, Filters, SHIELD config
-│   │   ├── Controllers/               # 11 REST + 6 Web + Health + Base
-│   │   ├── Database/Migrations/       # 16 migraciones (9 core + 2 auth + 1 linkage + 2 notifications + 2 settings)
+│   │   ├── Controllers/               # 12 REST + 6 Web + Health + Base
+│   │   ├── Database/Migrations/       # 17 migraciones (9 core + 2 auth + 1 linkage + 2 notifications + 2 settings + 1 ipfs)
 │   │   ├── Entities/                  # 9 entidades (Entity CI4)
 │   │   ├── Filters/                   # SecurityHeaders, Throttle, api-auth
 │   │   ├── Helpers/                   # Uuid helper (DRY UUID generation)
@@ -158,9 +159,9 @@ marachain/
 │   │   │       ├── WhatsAppNotificationProvider.php # Stub futuro
 │   │   │       ├── TelegramNotificationProvider.php # Stub futuro
 │   │   │       └── SmsNotificationProvider.php      # Stub futuro
-│   │   ├── Services/                  # 10 servicios + 4 interfaces
+│   │   ├── Services/                  # 11 servicios + 4 interfaces
 │   │   └── Validation/               # CustomRules
-│   ├── tests/                         # PHPUnit test suite (22 files)
+│   ├── tests/                         # PHPUnit test suite (33 files)
 │   ├── public/                        # Document root
 │   └── writable/                      # Logs, cache, sesiones
 ├── README.md                          # Este fichero
@@ -171,6 +172,7 @@ marachain/
 ├── SECURITY.md                        # Politica de seguridad
 ├── INSTALL.md                         # Guia de instalacion
 ├── AUDITORY.md                        # Trazabilidad de auditorias
+├── TODO.md                            # Tareas pendientes
 ├── nginx-fnmt-mtls.conf               # Nginx mTLS configuration
 ├── scripts/                           # Deploy scripts (staging, prod)
 ├── LICENSE                            # GPL-3.0-or-later
@@ -218,18 +220,19 @@ composer audit                   # Auditoria de dependencias
 ## Estado del Proyecto
 
 - **Fase**: MVP (Pre-alpha)
-- **Tests**: ~220 tests, ~500 assertions (SQLite :memory:)
+- **Tests**: ~500 assertions en 33 archivos (SQLite :memory:)
+- **OpenSpec**: 64/66 tareas completadas (Fases 1-7 finalizadas, Fase 8 E2E pendiente)
 - **Entidades**: 9 implementadas
-- **Migraciones**: 16 implementadas (9 core + 2 auth/shield + 1 linkage + 2 notifications + 2 settings)
+- **Migraciones**: 17 implementadas (9 core + 2 auth/shield + 1 linkage + 2 notifications + 2 settings + 1 ipfs/blockchain)
 - **Modelos**: 10 implementados
-- **Controladores REST**: 11 implementados (40+ endpoints, protegidos con api-auth)
+- **Controladores REST**: 12 implementados (45+ endpoints, protegidos con api-auth)
 - **Controladores Web**: 6 implementados (login, register, inbox, outbox, contacts, profile)
-- **Servicios**: 10 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor, Storage, Evidence, + 4 interfaces)
-- **CLI Commands**: 3 implementados (ledger:genesis, ledger:seal, notifications:send)
+- **Servicios**: 11 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor, Storage, Evidence, TimestampService + 4 interfaces)
+- **CLI Commands**: 4 implementados (LedgerGenesis, LedgerSeal, NotificationsCommand, + legacy NotificationSend)
 - **Validacion**: 9 grupos de reglas + 4 CustomRules
 - **Seguridad**: api-auth filter (rutas REST), Filtro SecurityHeaders activo (7 cabeceras OWASP), Rate Limiting (auth + FNMT TOTP), SHIELD auth, Nginx mTLS config
 - **Despliegue**: Scripts de deploy staging/prod, .env, nginx-fnmt-mtls.conf
-- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1), MVP feature audit (v1.4.0), notification system audit (v1.5.0), settings/api-auth audit (v1.6.0)
+- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1), MVP feature audit (v1.4.0), notification system audit (v1.5.0), settings/api-auth audit (v1.6.0), documentation audit (v1.7.0)
 
 ## Documentacion
 
@@ -242,6 +245,7 @@ composer audit                   # Auditoria de dependencias
 | [SECURITY.md](./SECURITY.md) | Politicas y medidas de seguridad |
 | [INSTALL.md](./INSTALL.md) | Guia de instalacion paso a paso |
 | [AUDITORY.md](./AUDITORY.md) | Trazabilidad de auditorias de codigo |
+| [TODO.md](./TODO.md) | Tareas pendientes para version comercial |
 
 ## Licencia
 

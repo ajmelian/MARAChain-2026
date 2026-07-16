@@ -1,0 +1,3133 @@
+# =============================================================================
+# MARAChain API — OpenAPI 3.1 Specification
+# =============================================================================
+# Titulo:    MARAChain API
+# Version:   1.7.0
+# Desc:      API REST de MARAChain — Plataforma de intercambio seguro de
+#            documentacion con firma electronica
+# Autor:     Aythami Melián Perdomo <ajmelper@gmail.com>
+# Licencia:  GPL 3.0
+# =============================================================================
+
+openapi: "3.1.0"
+info:
+  title: MARAChain API
+  version: 1.7.0
+  description: >
+    API REST de MARAChain — Plataforma de intercambio seguro de documentacion
+    con firma electronica. Proporciona endpoints para autenticacion, gestion de
+    usuarios, dispositivos, documentos, transferencias, firmas electronicas,
+    evidencias, ledger inmutable, contactos, notificaciones y sellado de tiempo.
+  contact:
+    name: Aythami Melián Perdomo
+    email: ajmelper@gmail.com
+  license:
+    name: GPL 3.0
+    identifier: GPL-3.0-only
+
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+  - url: https://marachain.com
+    description: Produccion
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: >
+        Cookie de sesion SHIELD. Utilizada por las rutas web (HTML). Se obtiene
+        tras un login exitoso via POST /login.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Token JWT Bearer para autenticacion de rutas API (JSON). Se incluye en
+        el header Authorization: Bearer <token>.
+
+  schemas:
+
+    # ── Error ───────────────────────────────────────────────────────────
+    Error:
+      type: object
+      description: >
+        Error estandar de la API. Puede incluir errores de validacion por
+        campo en la propiedad `errors`.
+      properties:
+        status:
+          type: integer
+          description: Codigo de estado HTTP
+          example: 422
+        message:
+          type: string
+          description: Mensaje de error legible
+          example: Validation failed.
+        errors:
+          type: object
+          description: Mapa de errores por campo (solo en validaciones fallidas).
+          additionalProperties:
+            type: string
+          example:
+            email: "The email field is required."
+      required:
+        - status
+        - message
+
+    # ── PaginatedResponse ──────────────────────────────────────────────
+    PaginatedResponse:
+      type: object
+      description: Envoltorio de respuesta paginada.
+      properties:
+        data:
+          type: array
+          description: Array de elementos de la pagina actual
+          items:
+            type: object
+        total:
+          type: integer
+          description: Numero total de registros
+          example: 142
+        page:
+          type: integer
+          description: Numero de pagina actual
+          example: 1
+        perPage:
+          type: integer
+          description: Elementos por pagina
+          example: 20
+      required:
+        - data
+        - total
+        - page
+        - perPage
+
+    # ── HealthResponse ──────────────────────────────────────────────────
+    HealthResponse:
+      type: object
+      description: Resultado del health check del sistema.
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded]
+          description: Estado general del sistema
+          example: healthy
+        checks:
+          type: object
+          description: >
+            Resultados individuales de cada componente (database, migrations,
+            ledger_blocks, pending_notifications, smtp, ipfs, disk, version,
+            php, time).
+          properties:
+            database:
+              type: string
+              example: connected
+            migrations:
+              type: string
+              example: "15 applied"
+            ledger_blocks:
+              type: integer
+              example: 42
+            pending_notifications:
+              type: integer
+              nullable: true
+              example: 3
+            smtp:
+              type: string
+              example: connected
+            ipfs:
+              type: string
+              example: connected
+            ipfs_peer_id:
+              type: string
+              example: 12D3KooWQVqN...
+            disk:
+              type: object
+              properties:
+                usage_pct:
+                  type: number
+                  format: float
+                  example: 42.5
+                free_gb:
+                  type: number
+                  format: float
+                  example: 28.3
+                total_gb:
+                  type: number
+                  format: float
+                  example: 49.2
+            version:
+              type: string
+              example: 1.7.0
+            php:
+              type: string
+              example: 8.5.15
+            time:
+              type: string
+              format: date-time
+              example: "2026-07-16T14:30:00+00:00"
+      required:
+        - status
+        - checks
+
+    # ── User ────────────────────────────────────────────────────────────
+    User:
+      type: object
+      description: Identidad de usuario interna (persona fisica o juridica).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        identityType:
+          type: string
+          enum: [physical, legal]
+          description: Tipo de identidad
+          example: physical
+        firstName:
+          type: string
+          description: Nombre
+          example: Juan
+        lastName:
+          type: string
+          nullable: true
+          description: Apellidos
+          example: Garcia Lopez
+        legalName:
+          type: string
+          nullable: true
+          description: Razon social (solo para persona juridica)
+          example: ACME S.L.
+        email:
+          type: string
+          format: email
+          description: Email principal (unico)
+          example: juan@example.com
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de verificacion de email
+        phone:
+          type: string
+          nullable: true
+          description: Telefono en formato E.164
+          example: "+34922123456"
+        totpEnabled:
+          type: boolean
+          description: Indica si TOTP esta activo
+          example: false
+        totpFailures:
+          type: integer
+          description: Contador de fallos TOTP consecutivos
+          example: 0
+        totpBlockedUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Bloqueo temporal por fallos TOTP
+        status:
+          type: string
+          enum: [active, inactive, suspended, blocked]
+          description: Estado de la cuenta
+          example: active
+        guaranteeLevel:
+          type: string
+          enum: [low, substantial, high]
+          description: Nivel de garantia eIDAS
+          example: low
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Ultimo inicio de sesion exitoso
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - identityType
+        - firstName
+        - email
+        - status
+        - guaranteeLevel
+        - createdAt
+        - updatedAt
+
+    UserCreateRequest:
+      type: object
+      description: Datos para crear un nuevo usuario.
+      properties:
+        identityType:
+          type: string
+          enum: [physical, legal]
+          description: Tipo de identidad
+          example: physical
+        firstName:
+          type: string
+          description: Nombre
+          example: Juan
+        lastName:
+          type: string
+          nullable: true
+          description: Apellidos
+          example: Garcia Lopez
+        legalName:
+          type: string
+          nullable: true
+          description: Razon social
+        email:
+          type: string
+          format: email
+          description: Email principal
+          example: juan@example.com
+        phone:
+          type: string
+          nullable: true
+          description: Telefono E.164
+          example: "+34922123456"
+        status:
+          type: string
+          enum: [active, inactive, suspended, blocked]
+          description: Estado inicial
+          default: active
+        guaranteeLevel:
+          type: string
+          enum: [low, substantial, high]
+          description: Nivel de garantia
+          default: low
+      required:
+        - identityType
+        - firstName
+        - email
+
+    UserUpdateRequest:
+      type: object
+      description: Datos para actualizar un usuario (parcial).
+      properties:
+        firstName:
+          type: string
+          description: Nombre
+        lastName:
+          type: string
+          nullable: true
+          description: Apellidos
+        legalName:
+          type: string
+          nullable: true
+          description: Razon social
+        phone:
+          type: string
+          nullable: true
+          description: Telefono E.164
+        status:
+          type: string
+          enum: [active, inactive, suspended, blocked]
+          description: Estado
+        guaranteeLevel:
+          type: string
+          enum: [low, substantial, high]
+          description: Nivel de garantia
+
+    TotpEnableRequest:
+      type: object
+      description: Datos para activar TOTP en un usuario.
+      properties:
+        totpSecret:
+          type: string
+          description: Secreto TOTP (hex). Opcional; si no se envia se genera automaticamente.
+          example: "4d6f637269746f73"
+
+    # ── Device ──────────────────────────────────────────────────────────
+    Device:
+      type: object
+      description: Dispositivo autorizado de un usuario.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        userId:
+          type: string
+          format: uuid
+          description: UUID del usuario propietario
+        deviceName:
+          type: string
+          description: Nombre descriptivo del dispositivo
+          example: MacBook Pro Chrome
+        deviceType:
+          type: string
+          enum: [desktop, laptop, tablet, mobile, other]
+          description: Tipo de dispositivo
+          example: laptop
+        operatingSystem:
+          type: string
+          nullable: true
+          description: Sistema operativo detectado
+          example: macOS 15.0
+        browser:
+          type: string
+          nullable: true
+          description: Navegador detectado
+          example: Chrome 128
+        publicKeyFingerprint:
+          type: string
+          description: Huella digital de la clave publica (64 caracteres hex)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        publicKeyAlgorithm:
+          type: string
+          description: Algoritmo de clave publica
+          example: ECDSA-P256
+        cryptographicEpoch:
+          type: integer
+          description: Epoca criptografica
+          example: 1
+        status:
+          type: string
+          enum: [active, revoked, lost]
+          description: Estado del dispositivo
+          example: active
+        firstSeenAt:
+          type: string
+          format: date-time
+          description: Primera vez que se vio el dispositivo
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Ultima vez que se vio el dispositivo
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de revocacion
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - userId
+        - deviceName
+        - deviceType
+        - publicKeyFingerprint
+        - publicKeyAlgorithm
+        - cryptographicEpoch
+        - status
+        - firstSeenAt
+        - createdAt
+        - updatedAt
+
+    DeviceRegisterRequest:
+      type: object
+      description: Datos para registrar un nuevo dispositivo.
+      properties:
+        deviceName:
+          type: string
+          description: Nombre descriptivo
+          example: MacBook Pro Chrome
+        deviceType:
+          type: string
+          enum: [desktop, laptop, tablet, mobile, other]
+          description: Tipo de dispositivo
+          example: laptop
+        operatingSystem:
+          type: string
+          nullable: true
+          description: SO detectado
+        browser:
+          type: string
+          nullable: true
+          description: Navegador detectado
+        publicKeyFingerprint:
+          type: string
+          description: Huella de clave publica (64 hex)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        publicKeyAlgorithm:
+          type: string
+          description: Algoritmo
+          example: ECDSA-P256
+        cryptographicEpoch:
+          type: integer
+          description: Epoca criptografica
+          example: 1
+      required:
+        - deviceName
+        - deviceType
+        - publicKeyFingerprint
+        - publicKeyAlgorithm
+        - cryptographicEpoch
+
+    # ── Document ────────────────────────────────────────────────────────
+    Document:
+      type: object
+      description: Documento con versionado y ciclo de vida.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        ownerId:
+          type: string
+          format: uuid
+          description: UUID del usuario propietario
+        title:
+          type: string
+          description: Titulo del documento
+          example: Contrato de arrendamiento
+        description:
+          type: string
+          nullable: true
+          description: Descripcion o motivacion
+        mimeType:
+          type: string
+          description: Tipo MIME
+          example: application/pdf
+        fileSize:
+          type: integer
+          description: Tamano del fichero original en bytes
+          example: 245760
+        fileHashSha256:
+          type: string
+          description: SHA-256 del documento original (64 hex)
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        version:
+          type: integer
+          description: Version del documento (inmutable)
+          example: 1
+        status:
+          type: string
+          enum: [DRAFT, SEALED, ENCRYPTED, ARCHIVED, DESTROYED]
+          description: Estado del documento
+          example: DRAFT
+        manifestHash:
+          type: string
+          nullable: true
+          description: SHA-256 del manifiesto canonicalizado
+        manifestJson:
+          type: string
+          nullable: true
+          description: JSON canonicalizado del manifiesto completo
+        cid:
+          type: string
+          nullable: true
+          description: Content Identifier en IPFS privado
+          example: QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco
+        ipfsCid:
+          type: string
+          nullable: true
+          description: CID del cifrado en IPFS
+        blockchainTxId:
+          type: string
+          nullable: true
+          description: Hash del bloque del ledger donde se registro
+        encryptionFormat:
+          type: string
+          nullable: true
+          description: Formato de cifrado
+          example: marachain-envelope
+        contentCipher:
+          type: string
+          nullable: true
+          description: Algoritmo de cifrado simetrico
+          example: AES-256-GCM
+        sealedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento del sellado
+        encryptedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento del cifrado
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento del archivo
+        destroyedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de la destruccion
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - ownerId
+        - title
+        - mimeType
+        - fileSize
+        - fileHashSha256
+        - version
+        - status
+        - createdAt
+        - updatedAt
+
+    DocumentCreateRequest:
+      type: object
+      description: Datos para crear un nuevo documento.
+      properties:
+        title:
+          type: string
+          description: Titulo del documento
+          example: Contrato de arrendamiento
+        description:
+          type: string
+          nullable: true
+          description: Descripcion
+        mimeType:
+          type: string
+          description: Tipo MIME
+          example: application/pdf
+        fileSize:
+          type: integer
+          description: Tamano en bytes
+          example: 245760
+        fileHashSha256:
+          type: string
+          description: SHA-256 del fichero original
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      required:
+        - title
+        - mimeType
+        - fileSize
+        - fileHashSha256
+
+    DocumentSealRequest:
+      type: object
+      description: Datos para sellar un documento.
+      properties:
+        manifestHash:
+          type: string
+          description: SHA-256 del manifiesto canonicalizado (opcional)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+
+    DocumentUploadResponse:
+      type: object
+      description: Respuesta tras la subida de un documento cifrado.
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            documentId:
+              type: string
+              format: uuid
+              description: UUID del documento creado
+            title:
+              type: string
+              description: Titulo del documento
+            fileHashSha256:
+              type: string
+              description: Hash SHA-256 del fichero original
+            status:
+              type: string
+              description: Estado del documento
+              example: ENCRYPTED
+            encryptedAt:
+              type: string
+              format: date-time
+              description: Momento del cifrado
+            ipfsCid:
+              type: string
+              description: CID en IPFS
+      required:
+        - status
+        - data
+
+    # ── DocumentTransfer ───────────────────────────────────────────────
+    DocumentTransfer:
+      type: object
+      description: Transferencia de documento entre remitente y destinatario (metafora Inbox/Outbox).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "880e8400-e29b-41d4-a716-446655440003"
+        documentId:
+          type: string
+          format: uuid
+          description: UUID del documento transferido
+        senderId:
+          type: string
+          format: uuid
+          description: UUID del remitente
+        recipientId:
+          type: string
+          format: uuid
+          description: UUID del destinatario
+        status:
+          type: string
+          enum:
+            - PENDING_RECIPIENT
+            - READY
+            - SENDING
+            - SENT
+            - AVAILABLE
+            - ACCESSED
+            - DOWNLOADED
+            - ACCEPTED
+            - REJECTED
+            - EXPIRED
+            - REVOKED
+            - FAILED
+          description: Estado de la transferencia
+          example: AVAILABLE
+        requiresSignature:
+          type: boolean
+          description: Si requiere firma del remitente
+          example: false
+        signatureCompleted:
+          type: boolean
+          description: Si la firma fue completada
+          example: false
+        signatureRequestId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID de la solicitud de firma asociada
+        requiresEncryption:
+          type: boolean
+          description: Si requiere cifrado (siempre true en MVP)
+          example: true
+        encryptionEnvelopeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID del sobre de cifrado
+        securityLevel:
+          type: string
+          enum: [standard, signed, signed_sealed]
+          description: Nivel de seguridad
+          example: standard
+        idempotencyKey:
+          type: string
+          description: Clave de idempotencia (64 caracteres)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de expiracion
+        availableAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento en que estuvo disponible
+        accessedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Primer acceso del destinatario
+        downloadedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de descarga
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de aceptacion
+        rejectedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de rechazo
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de revocacion
+        failedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de fallo
+        failureReason:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Motivo del fallo
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - documentId
+        - senderId
+        - recipientId
+        - status
+        - securityLevel
+        - idempotencyKey
+        - createdAt
+        - updatedAt
+
+    TransferCreateRequest:
+      type: object
+      description: Datos para crear una nueva transferencia.
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: UUID del documento a transferir
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        recipientId:
+          type: string
+          format: uuid
+          description: UUID del destinatario
+          example: "990e8400-e29b-41d4-a716-446655440004"
+        securityLevel:
+          type: string
+          enum: [standard, signed, signed_sealed]
+          description: Nivel de seguridad
+          default: standard
+        requiresSignature:
+          type: boolean
+          description: Si se requiere firma del remitente
+          default: false
+        idempotencyKey:
+          type: string
+          description: Clave de idempotencia (64 caracteres) para evitar duplicados
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de expiracion de la transferencia
+      required:
+        - documentId
+        - recipientId
+        - idempotencyKey
+
+    TransferRejectRequest:
+      type: object
+      description: Motivo de rechazo de una transferencia.
+      properties:
+        reason:
+          type: string
+          description: Motivo del rechazo
+          example: Documento incorrecto
+          maxLength: 500
+
+    # ── SignatureRequest ───────────────────────────────────────────────
+    SignatureRequest:
+      type: object
+      description: Solicitud de firma electronica delegada.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "aa0e8400-e29b-41d4-a716-446655440005"
+        documentId:
+          type: string
+          format: uuid
+          description: UUID del documento a firmar
+        userId:
+          type: string
+          format: uuid
+          description: UUID del usuario firmante
+        signatureIntent:
+          type: string
+          description: Tipo de operacion (ej. document_send)
+          example: document_send
+        status:
+          type: string
+          description: Estado de la solicitud
+          example: CREATED
+        manifestVersion:
+          type: integer
+          description: Version del esquema del manifiesto
+          example: 1
+        manifestJson:
+          type: string
+          description: Manifiesto canonicalizado (RFC 8785)
+        manifestHash:
+          type: string
+          description: SHA-256 del manifiesto
+        digestAlgorithm:
+          type: string
+          description: Algoritmo de hash usado
+          example: SHA-256
+        signatureProvider:
+          type: string
+          description: Proveedor de firma utilizado
+          example: fnmt
+        providerRequestId:
+          type: string
+          nullable: true
+          description: ID de solicitud del proveedor
+        signedDigest:
+          type: string
+          nullable: true
+          description: Digest firmado (sensible)
+        signerIdentity:
+          type: string
+          nullable: true
+          description: Identidad del firmante segun el proveedor
+        signatureAlgorithm:
+          type: string
+          nullable: true
+          description: Algoritmo de firma usado
+        nonce:
+          type: string
+          description: Nonce anti-replay (64 caracteres)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        issuedAt:
+          type: string
+          format: date-time
+          description: Momento de emision
+        expiresAt:
+          type: string
+          format: date-time
+          description: Momento de expiracion
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de completado
+        failedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento de fallo
+        failureReason:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Motivo del fallo
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - documentId
+        - userId
+        - signatureIntent
+        - status
+        - manifestVersion
+        - manifestJson
+        - manifestHash
+        - digestAlgorithm
+        - signatureProvider
+        - nonce
+        - issuedAt
+        - expiresAt
+        - createdAt
+        - updatedAt
+
+    SignatureRequestCreate:
+      type: object
+      description: Datos para solicitar una firma electronica.
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: UUID del documento
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        signatureIntent:
+          type: string
+          description: Tipo de operacion
+          example: document_send
+        manifestVersion:
+          type: integer
+          description: Version del manifiesto
+          example: 1
+        manifestJson:
+          type: string
+          description: Manifiesto canonicalizado
+        manifestHash:
+          type: string
+          description: SHA-256 del manifiesto
+        digestAlgorithm:
+          type: string
+          description: Algoritmo de hash
+          default: SHA-256
+        signatureProvider:
+          type: string
+          description: Proveedor de firma
+          example: fnmt
+      required:
+        - documentId
+        - signatureIntent
+        - manifestVersion
+        - manifestJson
+        - manifestHash
+        - signatureProvider
+
+    # ── Evidence ───────────────────────────────────────────────────────
+    Evidence:
+      type: object
+      description: >
+        Registro de evidencia inmutable y append-only. Nunca se edita.
+        Se incorpora al ledger interno mediante hashes.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "bb0e8400-e29b-41d4-a716-446655440006"
+        eventId:
+          type: string
+          format: uuid
+          description: UUID unico del evento
+        eventType:
+          type: string
+          description: Tipo de evento (ej. LoginSuccess, TransferSent)
+          example: TransferSent
+        schemaVersion:
+          type: string
+          description: Version del esquema
+          example: "1.0"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Marca de tiempo exacta del evento
+        aggregateType:
+          type: string
+          description: Tipo de agregado (User, Document, etc.)
+          example: Document
+        aggregateId:
+          type: string
+          format: uuid
+          description: UUID del agregado raiz
+        correlationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID de correlacion para trazabilidad distribuida
+        causationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID del evento causante
+        actorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID del actor que realizo la accion
+        actorType:
+          type: string
+          nullable: true
+          enum: [user, system, provider, worker]
+          description: Tipo de actor
+        payloadJson:
+          type: string
+          description: Payload minimo (sin PII, claves ni contenido)
+        payloadHash:
+          type: string
+          description: SHA-256 del payload canonicalizado
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        ipAddressTruncated:
+          type: string
+          nullable: true
+          description: IP truncada por privacidad
+        userAgentTruncated:
+          type: string
+          nullable: true
+          description: User-Agent truncado
+        ledgerBlockNumber:
+          type: integer
+          nullable: true
+          description: Numero de bloque del ledger donde se incorporo
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+      required:
+        - id
+        - eventId
+        - eventType
+        - schemaVersion
+        - occurredAt
+        - aggregateType
+        - aggregateId
+        - payloadJson
+        - payloadHash
+        - createdAt
+
+    # ── LedgerBlock ────────────────────────────────────────────────────
+    LedgerBlock:
+      type: object
+      description: Bloque del ledger interno append-only.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "cc0e8400-e29b-41d4-a716-446655440007"
+        blockNumber:
+          type: integer
+          description: Numero de bloque secuencial (unico)
+          example: 42
+        periodStart:
+          type: string
+          format: date-time
+          description: Inicio del periodo del bloque
+        periodEnd:
+          type: string
+          format: date-time
+          description: Fin del periodo del bloque
+        eventCount:
+          type: integer
+          description: Numero de eventos en el bloque
+          example: 15
+        eventsJson:
+          type: string
+          description: JSON canonicalizado de eventos
+        merkleRoot:
+          type: string
+          description: Raiz Merkle de los eventos (SHA-256)
+          example: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5"
+        previousBlockHash:
+          type: string
+          nullable: true
+          description: Hash del bloque anterior (null para genesis)
+          example: "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
+        blockHash:
+          type: string
+          description: SHA-256 del bloque completo canonicalizado
+        blockSignature:
+          type: string
+          description: Firma Ed25519 del bloque
+        signingKeyFingerprint:
+          type: string
+          description: Huella de la clave de firma Ed25519
+        schemaVersion:
+          type: string
+          description: Version del esquema de bloque
+          example: "1.0"
+        sealedAt:
+          type: string
+          format: date-time
+          description: Momento del sellado del bloque
+        checkpointId:
+          type: string
+          nullable: true
+          description: ID del checkpoint en DLT externa (fase 2)
+        checkpointTxHash:
+          type: string
+          nullable: true
+          description: Hash de anclaje en DLT externa (fase 2)
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+      required:
+        - id
+        - blockNumber
+        - periodStart
+        - periodEnd
+        - eventCount
+        - eventsJson
+        - merkleRoot
+        - blockHash
+        - blockSignature
+        - signingKeyFingerprint
+        - schemaVersion
+        - sealedAt
+        - createdAt
+
+    LedgerVerifyResponse:
+      type: object
+      description: Resultado de la verificacion de integridad del ledger.
+      properties:
+        valid:
+          type: boolean
+          description: Indica si toda la cadena es valida
+          example: true
+        totalBlocks:
+          type: integer
+          description: Numero total de bloques verificados
+          example: 42
+        errors:
+          type: array
+          description: Lista de errores encontrados (vacio si todo correcto)
+          items:
+            type: string
+          example: []
+        checkedAt:
+          type: string
+          format: date-time
+          description: Momento de la verificacion
+
+    # ── Contact ────────────────────────────────────────────────────────
+    Contact:
+      type: object
+      description: Entrada de la libreta de direcciones del usuario.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "dd0e8400-e29b-41d4-a716-446655440008"
+        ownerId:
+          type: string
+          format: uuid
+          description: UUID del usuario propietario
+        linkedUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID del usuario verificado vinculado
+        contactType:
+          type: string
+          enum: [physical_person, legal_entity]
+          description: Tipo de contacto
+          example: physical_person
+        firstName:
+          type: string
+          nullable: true
+          description: Nombre
+          example: Maria
+        lastName:
+          type: string
+          nullable: true
+          description: Apellidos
+          example: Rodriguez Perez
+        legalName:
+          type: string
+          nullable: true
+          description: Razon social (para entidad juridica)
+        attentionOf:
+          type: string
+          nullable: true
+          description: A la atencion de (obligatorio para juridica)
+        emailPrimary:
+          type: string
+          format: email
+          description: Email principal (requerido)
+          example: maria@example.com
+        emailSecondaryJson:
+          type: string
+          nullable: true
+          description: Emails secundarios en JSON
+        phone:
+          type: string
+          nullable: true
+          description: Telefono E.164
+          example: "+34922123457"
+        telegramAccount:
+          type: string
+          nullable: true
+          description: Cuenta de Telegram
+        whatsappAccount:
+          type: string
+          nullable: true
+          description: Cuenta de WhatsApp
+        address:
+          type: string
+          nullable: true
+          description: Direccion postal
+        postalCode:
+          type: string
+          nullable: true
+          description: Codigo postal (texto, preserva ceros a la izquierda)
+          example: "38001"
+        province:
+          type: string
+          nullable: true
+          description: Provincia
+          example: Santa Cruz de Tenerife
+        country:
+          type: string
+          description: Codigo ISO 3166-1 alpha-2
+          example: ES
+        identityStatus:
+          type: string
+          enum: [pending, invited, verified, rejected]
+          description: Estado de identidad del contacto
+          example: pending
+        publicKeyFingerprint:
+          type: string
+          nullable: true
+          description: Huella de clave publica (cuando verificado)
+        notes:
+          type: string
+          nullable: true
+          description: Notas privadas del usuario
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - ownerId
+        - contactType
+        - emailPrimary
+        - country
+        - identityStatus
+        - createdAt
+        - updatedAt
+
+    ContactCreateRequest:
+      type: object
+      description: Datos para crear un nuevo contacto.
+      properties:
+        contactType:
+          type: string
+          enum: [physical_person, legal_entity]
+          description: Tipo de contacto
+          example: physical_person
+        firstName:
+          type: string
+          description: Nombre
+          example: Maria
+        lastName:
+          type: string
+          nullable: true
+          description: Apellidos
+        legalName:
+          type: string
+          nullable: true
+          description: Razon social
+        attentionOf:
+          type: string
+          nullable: true
+          description: A la atencion de
+        emailPrimary:
+          type: string
+          format: email
+          description: Email principal
+          example: maria@example.com
+        phone:
+          type: string
+          nullable: true
+          description: Telefono E.164
+        telegramAccount:
+          type: string
+          nullable: true
+          description: Cuenta Telegram
+        whatsappAccount:
+          type: string
+          nullable: true
+          description: Cuenta WhatsApp
+        address:
+          type: string
+          nullable: true
+          description: Direccion
+        postalCode:
+          type: string
+          nullable: true
+          description: Codigo postal
+        province:
+          type: string
+          nullable: true
+          description: Provincia
+        country:
+          type: string
+          description: Codigo ISO pais
+          default: ES
+        notes:
+          type: string
+          nullable: true
+          description: Notas privadas
+      required:
+        - contactType
+        - emailPrimary
+
+    ContactUpdateRequest:
+      type: object
+      description: Datos para actualizar un contacto (parcial).
+      properties:
+        contactType:
+          type: string
+          enum: [physical_person, legal_entity]
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        legalName:
+          type: string
+          nullable: true
+        attentionOf:
+          type: string
+          nullable: true
+        emailPrimary:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        telegramAccount:
+          type: string
+          nullable: true
+        whatsappAccount:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        province:
+          type: string
+          nullable: true
+        country:
+          type: string
+        notes:
+          type: string
+          nullable: true
+
+    # ── Notification ───────────────────────────────────────────────────
+    Notification:
+      type: object
+      description: Notificacion del sistema (outbox transaccional).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador UUID v4
+          example: "ee0e8400-e29b-41d4-a716-446655440009"
+        transferId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID de la transferencia asociada
+        recipientUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID del usuario destinatario
+        recipientEmail:
+          type: string
+          format: email
+          description: Email del destinatario
+        notificationType:
+          type: string
+          description: Tipo de notificacion
+          example: transfer_received
+        subject:
+          type: string
+          description: Asunto del email
+          example: Nuevo documento recibido en MARAChain
+        bodyText:
+          type: string
+          nullable: true
+          description: Cuerpo en texto plano
+        bodyHtml:
+          type: string
+          nullable: true
+          description: Cuerpo en HTML
+        status:
+          type: string
+          enum: [PENDING, SENDING, SENT, FAILED, DEAD_LETTER]
+          description: Estado del envio
+          example: PENDING
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+          description: Prioridad
+          example: normal
+        attemptCount:
+          type: integer
+          description: Intentos de envio realizados
+          example: 0
+        maxAttempts:
+          type: integer
+          description: Maximo de reintentos
+          example: 3
+        lastAttemptAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Ultimo intento de envio
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento del envio exitoso
+        providerMessageId:
+          type: string
+          nullable: true
+          description: ID del mensaje en el proveedor
+        errorMessage:
+          type: string
+          nullable: true
+          description: Mensaje de error
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Envio programado para
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+      required:
+        - id
+        - recipientEmail
+        - notificationType
+        - subject
+        - status
+        - priority
+        - attemptCount
+        - maxAttempts
+        - createdAt
+        - updatedAt
+
+    # ── TimestampReceipt ───────────────────────────────────────────────
+    TimestampReceipt:
+      type: object
+      description: Recibo verificable de sellado de tiempo.
+      properties:
+        hash:
+          type: string
+          description: SHA-256 del evento sellado
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        eventId:
+          type: string
+          format: uuid
+          description: UUID del evento de evidencia
+        blockNumber:
+          type: integer
+          description: Numero de bloque del ledger
+          example: 42
+        blockHash:
+          type: string
+          description: Hash del bloque del ledger
+        sealedAt:
+          type: string
+          format: date-time
+          description: Momento del sellado
+        signature:
+          type: string
+          description: Firma Ed25519 del bloque
+        merkleProof:
+          type: array
+          description: Prueba Merkle de inclusion
+          items:
+            type: object
+            properties:
+              position:
+                type: string
+                enum: [left, right]
+              hash:
+                type: string
+      required:
+        - hash
+        - eventId
+        - blockNumber
+        - blockHash
+        - sealedAt
+        - signature
+        - merkleProof
+
+    TimestampReceiptResponse:
+      type: object
+      description: Envoltorio de respuesta del recibo de timestamp.
+      properties:
+        status:
+          type: string
+          example: success
+        receipt:
+          $ref: "#/components/schemas/TimestampReceipt"
+      required:
+        - status
+        - receipt
+
+    # ── LoginRequest ───────────────────────────────────────────────────
+    LoginRequest:
+      type: object
+      description: Credenciales de inicio de sesion.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email del usuario
+          example: juan@example.com
+        password:
+          type: string
+          format: password
+          description: Contrasena
+          example: "MyP@ssw0rd!"
+        remember:
+          type: boolean
+          description: Recordar sesion
+          default: false
+      required:
+        - email
+        - password
+
+    # ── RegisterRequest ────────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      description: Datos de registro de nueva cuenta.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email
+          example: juan@example.com
+        username:
+          type: string
+          pattern: "^[a-zA-Z0-9_]{3,30}$"
+          description: Nombre de usuario (letras, numeros, _, 3-30 caracteres)
+          example: juan_garcia
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Contrasena (min 8 caracteres, 1 mayuscula, 1 digito, 1 especial)
+          example: "MyP@ssw0rd!"
+        password_confirm:
+          type: string
+          format: password
+          description: Confirmacion de contrasena
+        identity_type:
+          type: string
+          enum: [physical, legal]
+          description: Tipo de identidad
+          example: physical
+        first_name:
+          type: string
+          maxLength: 100
+          description: Nombre
+          example: Juan
+        last_name:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: Apellidos
+        legal_name:
+          type: string
+          nullable: true
+          description: Razon social
+      required:
+        - email
+        - username
+        - password
+        - password_confirm
+        - identity_type
+        - first_name
+
+  # =========================================================================
+  # REUSABLE RESPONSES
+  # =========================================================================
+  responses:
+    NoContent:
+      description: Operacion exitosa sin contenido en la respuesta.
+      content: {}
+    ValidationError:
+      description: >
+        Error de validacion - los datos enviados no cumplen las reglas de
+        negocio o formato esperado.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      headers:
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Intentos restantes antes del rate limit
+    Unauthorized:
+      description: >
+        No autenticado. La solicitud carece de credenciales validas (cookie
+        de sesion o token Bearer).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: >
+        Prohibido. El usuario autenticado no tiene permisos para realizar
+        esta operacion sobre el recurso solicitado.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: >
+        Conflicto. El recurso ya existe o la operacion no es posible dado
+        el estado actual del recurso (ej. duplicado de email, estado no
+        transitable).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unprocessable:
+      description: >
+        Entidad no procesable. La solicitud esta bien formada pero no pudo
+        procesarse debido a errores semanticos (ej. transicion de estado no
+        valida).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: >
+        Demasiadas solicitudes. Se ha superado el limite de tasa (rate
+        limiting). Espere e intente de nuevo.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Segundos a esperar antes de reintentar
+    InternalError:
+      description: Error interno del servidor.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+
+# =============================================================================
+# PATHS
+# =============================================================================
+paths:
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  HEALTH
+  # ═══════════════════════════════════════════════════════════════════════
+  /health:
+    get:
+      summary: Health check del sistema
+      description: >
+        Comprueba el estado de todos los componentes del sistema: base de datos,
+        migraciones, ledger, cola de notificaciones, SMTP, IPFS, disco y version.
+        Utilizado por scripts de deploy, monitorizacion Prometheus y alertas.
+      tags: [Health]
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Sistema saludable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Sistema degradado (algun componente falla)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  AUTH (Web routes — HTML responses)
+  # ═══════════════════════════════════════════════════════════════════════
+  /login:
+    get:
+      summary: Mostrar formulario de inicio de sesion
+      description: >
+        Devuelve la pagina HTML del formulario de login. Si el usuario ya tiene
+        sesion activa, redirige a la pagina de inicio (inbox).
+        Limitado por rate limiting (throttle:auth).
+      tags: [Auth]
+      operationId: showLoginForm
+      responses:
+        "200":
+          description: Formulario de login (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+                description: Pagina HTML del formulario de login
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    post:
+      summary: Iniciar sesion
+      description: >
+        Autentica al usuario con email y contrasena via SHIELD. En caso de
+        exito, crea una sesion y redirige al inbox. Registra evidencias de
+        LoginSuccess o LoginFailed. Limitado por rate limiting.
+      tags: [Auth]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "302":
+          description: Redireccion al inbox tras login exitoso
+          headers:
+            Location:
+              schema:
+                type: string
+                description: URL de redireccion (/inbox)
+            Set-Cookie:
+              schema:
+                type: string
+                description: Cookie de sesion SHIELD
+        "200":
+          description: >
+            Pagina HTML con errores de validacion (si las credenciales son
+            incorrectas o la validacion falla)
+          content:
+            text/html:
+              schema:
+                type: string
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /register:
+    get:
+      summary: Mostrar formulario de registro
+      description: >
+        Devuelve la pagina HTML del formulario de registro de nueva cuenta.
+        Si el usuario ya tiene sesion, redirige al inbox.
+        Limitado por rate limiting.
+      tags: [Auth]
+      operationId: showRegisterForm
+      responses:
+        "200":
+          description: Formulario de registro (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    post:
+      summary: Crear cuenta de usuario
+      description: >
+        Registra un nuevo usuario: crea el usuario SHIELD, el perfil custom en
+        la tabla users, asigna el grupo por defecto, inicia sesion
+        automaticamente y registra evidencia UserRegistered.
+        Limitado por rate limiting.
+      tags: [Auth]
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "302":
+          description: Redireccion al inbox tras registro exitoso
+          headers:
+            Location:
+              schema:
+                type: string
+                description: URL de redireccion
+            Set-Cookie:
+              schema:
+                type: string
+                description: Cookie de sesion SHIELD
+        "200":
+          description: Pagina HTML con errores de validacion
+          content:
+            text/html:
+              schema:
+                type: string
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /logout:
+    get:
+      summary: Cerrar sesion
+      description: >
+        Destruye la sesion actual, registra evidencia LogoutSuccess y redirige
+        a la pagina de login.
+      tags: [Auth]
+      operationId: logout
+      responses:
+        "302":
+          description: Redireccion al login tras cerrar sesion
+          headers:
+            Location:
+              schema:
+                type: string
+                description: URL de redireccion (/login)
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  USERS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /users:
+    get:
+      summary: Listar todos los usuarios
+      description: >
+        Obtiene la lista completa de usuarios del sistema.
+        Requiere autenticacion API (Bearer token).
+      tags: [Users]
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Crear un nuevo usuario
+      description: >
+        Crea un nuevo usuario en el sistema. Requiere autenticacion API.
+        El email debe ser unico. Validacion mediante reglas del modelo.
+      tags: [Users]
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del usuario
+        schema:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+    get:
+      summary: Obtener un usuario por UUID
+      description: Devuelve los datos publicos de un usuario identificado por su UUID.
+      tags: [Users]
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Actualizar un usuario
+      description: >
+        Actualiza los datos de un usuario existente. Soporta actualizacion
+        parcial (semantica PATCH via PUT).
+      tags: [Users]
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateRequest"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    delete:
+      summary: Eliminar/bloquear un usuario
+      description: >
+        Realiza un soft-delete del usuario, cambiando su estado a 'blocked'.
+        El registro permanece en base de datos pero la cuenta queda desactivada.
+      tags: [Users]
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{id}/totp:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del usuario
+        schema:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+    post:
+      summary: Activar TOTP para un usuario
+      description: >
+        Activa la autenticacion de dos factores (TOTP) para el usuario
+        especificado. Solo el propio usuario puede activar TOTP en su cuenta.
+        Si no se proporciona un secreto, se genera automaticamente.
+      tags: [Users]
+      operationId: enableUserTotp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TotpEnableRequest"
+      responses:
+        "200":
+          description: TOTP activado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  DEVICES (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /devices:
+    get:
+      summary: Listar mis dispositivos
+      description: >
+        Obtiene la lista de dispositivos autorizados del usuario autenticado.
+        Cada dispositivo tiene su propio par de claves generado localmente.
+      tags: [Devices]
+      operationId: listDevices
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de dispositivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Registrar un nuevo dispositivo
+      description: >
+        Registra un nuevo dispositivo autorizado para el usuario autenticado.
+        Requiere la huella de la clave publica y el algoritmo utilizado.
+      tags: [Devices]
+      operationId: registerDevice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRegisterRequest"
+      responses:
+        "201":
+          description: Dispositivo registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /devices/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del dispositivo
+        schema:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+    get:
+      summary: Mostrar un dispositivo
+      description: Devuelve los datos de un dispositivo especifico por su UUID.
+      tags: [Devices]
+      operationId: getDevice
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del dispositivo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Revocar un dispositivo
+      description: >
+        Revoca un dispositivo autorizado. El dispositivo deja de ser valido
+        para operaciones criptograficas.
+      tags: [Devices]
+      operationId: revokeDevice
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  DOCUMENTS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /documents:
+    get:
+      summary: Listar mis documentos
+      description: >
+        Obtiene la lista de documentos del usuario autenticado. Solo devuelve
+        documentos cuyo propietario es el usuario de la sesion.
+      tags: [Documents]
+      operationId: listDocuments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Crear un documento
+      description: >
+        Crea un nuevo documento en estado DRAFT. El usuario autenticado se
+        asigna como propietario. El contenido original no se sube aqui - use
+        POST /documents/upload para subir el cifrado.
+      tags: [Documents]
+      operationId: createDocument
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentCreateRequest"
+      responses:
+        "201":
+          description: Documento creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /documents/upload:
+    post:
+      summary: Subir documento cifrado
+      description: >
+        Recibe un documento cifrado (multipart) con su sobre de cifrado
+        (marachain-envelope v1, JSON). El fichero se almacena en IPFS y se
+        crea el registro Document en estado ENCRYPTED. El contenido original
+        nunca llega al servidor en texto plano.
+      tags: [Documents]
+      operationId: uploadEncryptedDocument
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                envelope:
+                  type: string
+                  description: >
+                    JSON del sobre de cifrado (marachain-envelope v1) con
+                    formato, version, algoritmo y destinatarios.
+                  example: '{"format":"marachain-envelope","version":1,"contentCipher":"AES-256-GCM","manifestHash":"sha256:...","recipients":[]}'
+                metadata:
+                  type: string
+                  description: >
+                    JSON con metadatos del documento (title, description,
+                    mimeType, fileSize, fileHashSha256).
+                  example: '{"title":"Contrato","mimeType":"application/pdf","fileSize":245760,"fileHashSha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}'
+                file:
+                  type: string
+                  format: binary
+                  description: Fichero cifrado (binario)
+              required:
+                - envelope
+                - metadata
+                - file
+      responses:
+        "201":
+          description: Documento cifrado subido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentUploadResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /documents/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del documento
+        schema:
+          type: string
+          format: uuid
+          example: "770e8400-e29b-41d4-a716-446655440002"
+    get:
+      summary: Mostrar un documento
+      description: Devuelve los datos de un documento especifico por su UUID.
+      tags: [Documents]
+      operationId: getDocument
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del documento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Eliminar un documento (soft-delete)
+      description: >
+        Realiza un soft-delete del documento, cambiando su estado a DESTROYED
+        y registrando la fecha de destruccion. El registro permanece en base
+        de datos para auditoria.
+      tags: [Documents]
+      operationId: softDeleteDocument
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /documents/{id}/seal:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del documento a sellar
+        schema:
+          type: string
+          format: uuid
+          example: "770e8400-e29b-41d4-a716-446655440002"
+    post:
+      summary: Sellar un documento
+      description: >
+        Transiciona un documento del estado DRAFT a SEALED, haciendolo
+        inmutable. Opcionalmente se puede incluir el manifestHash del
+        manifiesto canonicalizado.
+      tags: [Documents]
+      operationId: sealDocument
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentSealRequest"
+      responses:
+        "200":
+          description: Documento sellado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /documents/{id}/destroy:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del documento a destruir criptograficamente
+        schema:
+          type: string
+          format: uuid
+          example: "770e8400-e29b-41d4-a716-446655440002"
+    post:
+      summary: Destruccion criptografica de un documento
+      description: >
+        Destruye criptograficamente un documento: elimina la referencia al
+        CID de IPFS (huérfano el ciphertext) y preserva el blockchain_tx_id
+        para auditoria. Operacion irreversible.
+      tags: [Documents]
+      operationId: cryptoDestroyDocument
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  TRANSFERS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /transfers:
+    get:
+      summary: Listar todas las transferencias
+      description: >
+        Obtiene la lista completa de transferencias. Sin filtros de usuario.
+        Para filtrar por remitente/destinatario, use /transfers/sent o
+        /transfers/received.
+      tags: [Transfers]
+      operationId: listTransfers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de transferencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Crear una transferencia
+      description: >
+        Crea una nueva transferencia de documento. De forma atomica:
+        - Crea la transferencia
+        - Encola una notificacion email al destinatario
+        - Registra evidencia DocumentSent
+        Requiere clave de idempotencia para evitar duplicados.
+      tags: [Transfers]
+      operationId: createTransfer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferCreateRequest"
+      responses:
+        "201":
+          description: Transferencia creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTransfer"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /transfers/sent:
+    get:
+      summary: Listar transferencias enviadas (Outbox)
+      description: >
+        Obtiene las transferencias donde el usuario autenticado es el
+        remitente. Equivalente a la bandeja de "enviados".
+      tags: [Transfers]
+      operationId: listSentTransfers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de transferencias enviadas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /transfers/received:
+    get:
+      summary: Listar transferencias recibidas (Inbox)
+      description: >
+        Obtiene las transferencias donde el usuario autenticado es el
+        destinatario. Equivalente a la bandeja de "recibidos".
+      tags: [Transfers]
+      operationId: listReceivedTransfers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de transferencias recibidas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /transfers/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la transferencia
+        schema:
+          type: string
+          format: uuid
+          example: "880e8400-e29b-41d4-a716-446655440003"
+    get:
+      summary: Mostrar una transferencia
+      description: Devuelve los datos de una transferencia especifica por su UUID.
+      tags: [Transfers]
+      operationId: getTransfer
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos de la transferencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /transfers/{id}/revoke:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la transferencia a revocar
+        schema:
+          type: string
+          format: uuid
+          example: "880e8400-e29b-41d4-a716-446655440003"
+    post:
+      summary: Revocar una transferencia
+      description: >
+        Revoca una transferencia. Solo el remitente puede revocarla.
+        La transferencia pasa a estado REVOKED y se registra evidencia.
+      tags: [Transfers]
+      operationId: revokeTransfer
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transferencia revocada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /transfers/{id}/accept:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la transferencia a aceptar
+        schema:
+          type: string
+          format: uuid
+          example: "880e8400-e29b-41d4-a716-446655440003"
+    post:
+      summary: Aceptar una transferencia
+      description: >
+        Acepta una transferencia como destinatario. La transferencia pasa
+        a estado ACCEPTED y se registra evidencia.
+      tags: [Transfers]
+      operationId: acceptTransfer
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transferencia aceptada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /transfers/{id}/reject:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la transferencia a rechazar
+        schema:
+          type: string
+          format: uuid
+          example: "880e8400-e29b-41d4-a716-446655440003"
+    post:
+      summary: Rechazar una transferencia
+      description: >
+        Rechaza una transferencia como destinatario. La transferencia pasa
+        a estado REJECTED y se registra evidencia con el motivo.
+      tags: [Transfers]
+      operationId: rejectTransfer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRejectRequest"
+      responses:
+        "200":
+          description: Transferencia rechazada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  SIGNATURES (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /signatures:
+    post:
+      summary: Solicitar firma electronica
+      description: >
+        Crea una solicitud de firma electronica delegada. El proveedor de
+        firma recibe exclusivamente el digest (hash del manifiesto
+        canonicalizado). Nunca recibe el documento claro, DEK, claves
+        privadas, CID ni sobres. Genera un nonce unico anti-replay.
+      tags: [Signatures]
+      operationId: requestSignature
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureRequestCreate"
+      responses:
+        "201":
+          description: Solicitud de firma creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureRequest"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /signatures/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la solicitud de firma
+        schema:
+          type: string
+          format: uuid
+          example: "aa0e8400-e29b-41d4-a716-446655440005"
+    get:
+      summary: Mostrar solicitud de firma
+      description: Devuelve los datos de una solicitud de firma por su UUID.
+      tags: [Signatures]
+      operationId: getSignatureRequest
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos de la solicitud de firma
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  EVIDENCE (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /evidence:
+    get:
+      summary: Listar evidencias
+      description: >
+        Obtiene el registro de evidencias. Opcionalmente filtrable por
+        event_type (query parameter). Solo lectura - las evidencias se crean
+        internamente por los servicios de dominio.
+      tags: [Evidence]
+      operationId: listEvidence
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: event_type
+          in: query
+          required: false
+          description: Filtrar por tipo de evento
+          schema:
+            type: string
+            example: TransferSent
+      responses:
+        "200":
+          description: Lista de evidencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Evidence"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /evidence/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del registro de evidencia
+        schema:
+          type: string
+          format: uuid
+          example: "bb0e8400-e29b-41d4-a716-446655440006"
+    get:
+      summary: Mostrar una evidencia
+      description: Devuelve un registro de evidencia especifico por su UUID.
+      tags: [Evidence]
+      operationId: getEvidence
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos de la evidencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  LEDGER (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /ledger:
+    get:
+      summary: Listar bloques del ledger
+      description: >
+        Obtiene la lista completa de bloques del ledger interno
+        append-only. Cada bloque contiene eventos canonicalizados,
+        raiz Merkle y firma Ed25519.
+      tags: [Ledger]
+      operationId: listLedgerBlocks
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de bloques del ledger
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LedgerBlock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ledger/verify:
+    get:
+      summary: Verificar integridad del ledger
+      description: >
+        Verifica la integridad de toda la cadena de bloques del ledger:
+        recalcula hashes, comprueba la continuidad de la cadena de hash y
+        verifica las raices Merkle de todos los bloques.
+        Devuelve 200 si la cadena es valida, 422 si se encuentran errores.
+      tags: [Ledger]
+      operationId: verifyLedger
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cadena de ledger verificada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerVerifyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: Errores de integridad en la cadena
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerVerifyResponse"
+
+  /ledger/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del bloque del ledger
+        schema:
+          type: string
+          format: uuid
+          example: "cc0e8400-e29b-41d4-a716-446655440007"
+    get:
+      summary: Mostrar un bloque del ledger
+      description: Devuelve un bloque especifico del ledger por su UUID.
+      tags: [Ledger]
+      operationId: getLedgerBlock
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del bloque del ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerBlock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  CONTACTS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /contacts:
+    get:
+      summary: Listar contactos
+      description: >
+        Obtiene la libreta de direcciones del usuario autenticado.
+        Opcionalmente filtrable por identity_status (query parameter).
+      tags: [Contacts]
+      operationId: listContacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: identity_status
+          in: query
+          required: false
+          description: Filtrar por estado de identidad
+          schema:
+            type: string
+            enum: [pending, invited, verified, rejected]
+      responses:
+        "200":
+          description: Lista de contactos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contact"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Crear un contacto
+      description: >
+        Anade una nueva entrada a la libreta de direcciones del usuario
+        autenticado. Puede ser persona fisica o entidad juridica.
+      tags: [Contacts]
+      operationId: createContact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactCreateRequest"
+      responses:
+        "201":
+          description: Contacto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /contacts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID del contacto
+        schema:
+          type: string
+          format: uuid
+          example: "dd0e8400-e29b-41d4-a716-446655440008"
+    get:
+      summary: Mostrar un contacto
+      description: Devuelve los datos de un contacto especifico por su UUID.
+      tags: [Contacts]
+      operationId: getContact
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del contacto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Actualizar un contacto
+      description: >
+        Actualiza los datos de un contacto existente. Soporta actualizacion
+        parcial (semantica PATCH via PUT).
+      tags: [Contacts]
+      operationId: updateContact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactUpdateRequest"
+      responses:
+        "200":
+          description: Contacto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    delete:
+      summary: Eliminar un contacto
+      description: >
+        Elimina permanentemente un contacto de la libreta de direcciones
+        (hard delete).
+      tags: [Contacts]
+      operationId: deleteContact
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  NOTIFICATIONS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /notifications:
+    get:
+      summary: Listar notificaciones
+      description: >
+        Obtiene las notificaciones del usuario autenticado. Opcionalmente
+        filtrable por notification_type y/o status (query parameters).
+        Las notificaciones se generan internamente mediante outbox
+        transaccional.
+      tags: [Notifications]
+      operationId: listNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notification_type
+          in: query
+          required: false
+          description: Filtrar por tipo de notificacion
+          schema:
+            type: string
+            example: transfer_received
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [PENDING, SENDING, SENT, FAILED, DEAD_LETTER]
+      responses:
+        "200":
+          description: Lista de notificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /notifications/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID de la notificacion
+        schema:
+          type: string
+          format: uuid
+          example: "ee0e8400-e29b-41d4-a716-446655440009"
+    get:
+      summary: Mostrar una notificacion
+      description: Devuelve los datos de una notificacion especifica por su UUID.
+      tags: [Notifications]
+      operationId: getNotification
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos de la notificacion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  TIMESTAMPS (API — JSON)
+  # ═══════════════════════════════════════════════════════════════════════
+  /timestamps/{hash}/receipt:
+    parameters:
+      - name: hash
+        in: path
+        required: true
+        description: >
+          Hash SHA-256 (64 caracteres hexadecimales) del evento para el que
+          se solicita el recibo de sellado de tiempo.
+        schema:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    get:
+      summary: Obtener recibo de timestamp
+      description: >
+        Recupera el recibo verificable de sellado de tiempo para un hash
+        SHA-256. Busca la evidencia asociada, genera la prueba Merkle de
+        inclusion y devuelve el recibo completo con firma Ed25519 del bloque.
+      tags: [Timestamps]
+      operationId: getTimestampReceipt
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Recibo de timestamp generado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimestampReceiptResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# =============================================================================
+# TAGS
+# =============================================================================
+tags:
+  - name: Health
+    description: Monitorizacion y health checks del sistema.
+  - name: Auth
+    description: >
+      Autenticacion de usuarios (rutas web, respuestas HTML). Incluye login,
+      registro y cierre de sesion. Rate-limited mediante throttle:auth.
+  - name: Users
+    description: Gestion de identidades de usuario (CRUD + TOTP). API JSON.
+  - name: Devices
+    description: Gestion de dispositivos autorizados. API JSON.
+  - name: Documents
+    description: >
+      Gestion de documentos con ciclo de vida (DRAFT, SEALED, ENCRYPTED,
+      ARCHIVED, DESTROYED). API JSON.
+  - name: Transfers
+    description: >
+      Transferencias de documentos entre usuarios (Inbox/Outbox). Gestion
+      de estados: envio, revocacion, aceptacion y rechazo. API JSON.
+  - name: Signatures
+    description: >
+      Solicitud y consulta de firmas electronicas delegadas a traves de
+      proveedores externos. API JSON.
+  - name: Evidence
+    description: >
+      Registro inmutable de evidencias (append-only event log). Solo
+      consulta; la creacion es interna. API JSON.
+  - name: Ledger
+    description: >
+      Ledger interno append-only con bloques encadenados, arbol Merkle y
+      firma Ed25519. Incluye verificacion de integridad. API JSON.
+  - name: Contacts
+    description: >
+      Libreta de direcciones del usuario (agenda de contactos). CRUD
+      completo para personas fisicas y entidades juridicas. API JSON.
+  - name: Notifications
+    description: >
+      Notificaciones del sistema generadas via outbox transaccional.
+      Solo consulta. API JSON.
+  - name: Timestamps
+    description: >
+      Sellado de tiempo verificable. Obtencion de recibos con prueba
+      Merkle de inclusion en el ledger. API JSON.

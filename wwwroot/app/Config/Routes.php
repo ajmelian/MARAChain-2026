@@ -8,6 +8,9 @@ $routes->get('/', 'Home::index');
 // ── Health check (smoke test for deploy) ────────────────────────
 $routes->get('health', 'HealthController::index');
 
+// ── API Documentation (Swagger UI) ──────
+$routes->get('api/docs', 'Api\DocsController::index');
+
 // ═════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES — Sin autenticacion (rate-limited)
 // ═════════════════════════════════════════════════════════════════════

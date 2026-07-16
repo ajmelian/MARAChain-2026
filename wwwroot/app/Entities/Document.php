@@ -24,6 +24,8 @@ use CodeIgniter\Entity\Entity;
  * @property string|null $manifestHash        SHA-256 of canonicalized manifest
  * @property string|null $manifestJson        Full manifest JSON (canonicalized)
  * @property string|null $cid                 Content Identifier in private IPFS
+ * @property string|null $ipfsCid             IPFS CID hash del ciphertext
+ * @property string|null $blockchainTxId      Ledger block hash de la transacción
  * @property string|null $encryptionFormat    Encryption format (marachain-envelope v1)
  * @property string|null $contentCipher       Symmetric encryption algorithm
  * @property string|null $sealedAt            Seal timestamp
@@ -51,6 +53,8 @@ class Document extends Entity
         'manifestHash'     => '?string',
         'manifestJson'     => '?string',
         'cid'              => '?string',
+        'ipfsCid'          => '?string',
+        'blockchainTxId'   => '?string',
         'encryptionFormat' => '?string',
         'contentCipher'    => '?string',
         'sealedAt'         => '?datetime',
@@ -70,6 +74,8 @@ class Document extends Entity
         'manifest_json'      => 'manifestJson',
         'encryption_format'  => 'encryptionFormat',
         'content_cipher'     => 'contentCipher',
+        'ipfs_cid'           => 'ipfsCid',
+        'blockchain_tx_id'   => 'blockchainTxId',
         'sealed_at'          => 'sealedAt',
         'encrypted_at'       => 'encryptedAt',
         'archived_at'        => 'archivedAt',

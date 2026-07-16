@@ -218,7 +218,7 @@ final class StorageServiceTest extends CIUnitTestCase
     }
 
     /**
-     * storeEncryptedDocument throws InvalidArgumentException when
+     * storeEncryptedDocument throws RuntimeException when
      * the manifest hash does not match the file hash.
      *
      * @test
@@ -231,7 +231,7 @@ final class StorageServiceTest extends CIUnitTestCase
         $metadata   = $this->buildValidMetadata($fileHash);
         $ciphertext = base64_encode(random_bytes(128));
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Manifest hash mismatch');
 
         $this->service->storeEncryptedDocument($envelope, $metadata, $ciphertext);

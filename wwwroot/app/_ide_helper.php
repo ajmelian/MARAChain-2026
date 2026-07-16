@@ -1,6 +1,5 @@
 <?php
 
-/** @noinspection PhpUnusedParameterInspection */
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 
 declare(strict_types=1);
@@ -8,9 +7,8 @@ declare(strict_types=1);
 /**
  * IDE Helper — CI4 global functions + SHIELD + ResponseTrait stubs.
  *
- * Este archivo no tiene efecto en ejecución. Solo sirve para que
- * intelephense (LSP del editor) reconozca las funciones globales
- * de CodeIgniter 4 y SHIELD que no están declaradas en el código fuente.
+ * Sin namespace block, para compatibilidad con PHPStan e intelephense.
+ * Las funciones helper de CI4 se declaran en el espacio global como stubs.
  *
  * @since 1.7.0
  */
@@ -19,226 +17,139 @@ declare(strict_types=1);
 //  CI4 Global Helpers
 // ═════════════════════════════════════════════════════════════════════
 
-/**
- * @template T of object
- * @param class-string<T>|string $name
- * @return T|mixed|null
- */
-function model(string $name) {}
-
-/**
- * @return \CodeIgniter\Shield\Authentication\Authentication|null
- */
-function auth() {}
-
-/**
- * @template T of object
- * @param class-string<T>|string $name
- * @return T|mixed|null
- */
-function service(string $name, ...$params) {}
-
-/**
- * @param string $name
- * @param array  $data
- * @param array  $options
- * @return string
- */
-function view(string $name, array $data = [], array $options = []) {}
-
-/**
- * @param mixed $value
- * @param string $charset
- * @return string
- */
-function esc(mixed $value, string $charset = 'UTF-8'): string {}
-
-/**
- * @return string
- */
-function csrf_field(): string {}
-
-/**
- * @return \CodeIgniter\HTTP\RedirectResponse
- */
-function redirect(?string $route = null): \CodeIgniter\HTTP\RedirectResponse {}
-
-/**
- * @template T of object
- * @param class-string<T>|string $name
- * @param array|null $settings
- * @return T|\CodeIgniter\Config\BaseConfig|null
- */
-function config(string $name, ?array $settings = null) {}
-
-/**
- * @param string|null $key
- * @param mixed|null $default
- * @return mixed
- */
-function env(?string $key = null, mixed $default = null): mixed {}
-
-/**
- * @param string|null $group
- * @param bool|null $getShared
- * @return \CodeIgniter\Database\BaseConnection&\CodeIgniter\Database\ConnectionInterface
- */
-function db_connect(?string $group = null, ?bool $getShared = null) {}
-
-/**
- * @param string $level
- * @param string $message
- * @param array $context
- * @return bool
- */
-function log_message(string $level, string $message, array $context = []): bool {}
-
-/**
- * @param string|null $val
- * @param string|null $default
- * @return mixed
- */
-function session(?string $val = null, ?string $default = null) {}
-
-// ═════════════════════════════════════════════════════════════════════
-//  Form Helpers
-// ═════════════════════════════════════════════════════════════════════
-
-/**
- * @param string $action
- * @param array  $attributes
- * @param array  $hidden
- * @return string
- */
-function form_open(string $action = '', array $attributes = [], array $hidden = []): string {}
-
-/**
- * @param array  $attributes
- * @return string
- */
-function form_close(array $attributes = []): string {}
-
-// ═════════════════════════════════════════════════════════════════════
-//  CI4 URL Helpers
-// ═════════════════════════════════════════════════════════════════════
-
-/**
- * @param string|null $uri
- * @return string
- */
-function base_url(?string $uri = null): string {}
-
-// ═════════════════════════════════════════════════════════════════════
-//  CodeIgniter\Shield\Authentication\Authentication
-// ═════════════════════════════════════════════════════════════════════
-
-namespace CodeIgniter\Shield\Authentication {
-
+if (! function_exists('model')) {
     /**
-     * @method bool loggedIn()
-     * @method \CodeIgniter\Shield\Entities\User|null user()
-     * @method \CodeIgniter\Shield\Authentication\AuthenticationResult attempt(array $credentials, bool $remember = false)
-     * @method bool logout()
-     * @method bool remember(bool $remember = false)
-     * @method \CodeIgniter\Shield\Authorization\Groups groups()
-     * @method \CodeIgniter\Shield\Models\UserModel getProvider()
+     * @template T of object
+     * @param class-string<T>|string $name
+     * @return T|mixed|null
      */
-    class Authentication {}
+    function model(string $name) {}
+}
+
+if (! function_exists('auth')) {
+    /**
+     * @return \CodeIgniter\Shield\Authentication\Authentication|null
+     */
+    function auth() {}
+}
+
+if (! function_exists('service')) {
+    /**
+     * @template T of object
+     * @param class-string<T>|string $name
+     * @param mixed ...$params
+     * @return T|mixed|null
+     */
+    function service(string $name, ...$params) {}
+}
+
+if (! function_exists('view')) {
+    /**
+     * @param string $name
+     * @param array  $data
+     * @param array  $options
+     * @return string
+     */
+    function view(string $name, array $data = [], array $options = []) {}
+}
+
+if (! function_exists('esc')) {
+    /**
+     * @param mixed  $value
+     * @param string $charset
+     * @return string
+     */
+    function esc(mixed $value, string $charset = 'UTF-8'): string {}
+}
+
+if (! function_exists('csrf_field')) {
+    /**
+     * @return string
+     */
+    function csrf_field(): string {}
+}
+
+if (! function_exists('redirect')) {
+    /**
+     * @param string|null $route
+     * @return \CodeIgniter\HTTP\RedirectResponse
+     */
+    function redirect(?string $route = null): \CodeIgniter\HTTP\RedirectResponse {}
+}
+
+if (! function_exists('config')) {
+    /**
+     * @template T of object
+     * @param class-string<T>|string $name
+     * @param array|null $settings
+     * @return T|\CodeIgniter\Config\BaseConfig|null
+     */
+    function config(string $name, ?array $settings = null) {}
+}
+
+if (! function_exists('env')) {
+    /**
+     * @param string|null $key
+     * @param mixed|null $default
+     * @return mixed
+     */
+    function env(?string $key = null, mixed $default = null): mixed {}
+}
+
+if (! function_exists('db_connect')) {
+    /**
+     * @param string|null $group
+     * @param bool|null $getShared
+     * @return \CodeIgniter\Database\BaseConnection
+     */
+    function db_connect(?string $group = null, ?bool $getShared = null) {}
+}
+
+if (! function_exists('log_message')) {
+    /**
+     * @param string $level
+     * @param string $message
+     * @param array  $context
+     * @return bool
+     */
+    function log_message(string $level, string $message, array $context = []): bool {}
+}
+
+if (! function_exists('session')) {
+    /**
+     * @param string|null $val
+     * @param string|null $default
+     * @return mixed
+     */
+    function session(?string $val = null, ?string $default = null) {}
+}
+
+if (! function_exists('form_open')) {
+    /**
+     * @param string $action
+     * @param array  $attributes
+     * @param array  $hidden
+     * @return string
+     */
+    function form_open(string $action = '', array $attributes = [], array $hidden = []): string {}
+}
+
+if (! function_exists('form_close')) {
+    /**
+     * @param array $attributes
+     * @return string
+     */
+    function form_close(array $attributes = []): string {}
+}
+
+if (! function_exists('base_url')) {
+    /**
+     * @param string|null $uri
+     * @return string
+     */
+    function base_url(?string $uri = null): string {}
 }
 
 // ═════════════════════════════════════════════════════════════════════
-//  CodeIgniter\API\ResponseTrait — métodos comunes en controladores
+//  CI4 RequestInterface — methods added by CI4 but unknown to intelephense
 // ═════════════════════════════════════════════════════════════════════
-
-namespace CodeIgniter\API {
-
-    trait ResponseTrait
-    {
-        /**
-         * @param mixed|null $data
-         * @param int $statusCode
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function respond(mixed $data = null, int $statusCode = 200, string $message = '') {}
-
-        /**
-         * @param mixed $data
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function respondCreated(mixed $data = null, string $message = '') {}
-
-        /**
-         * @param mixed $data
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function respondDeleted(mixed $data = null, string $message = '') {}
-
-        /**
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function respondNoContent(string $message = '') {}
-
-        /**
-         * @param mixed $errors
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function failValidationErrors(mixed $errors, string $message = '') {}
-
-        /**
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function failNotFound(string $message = '') {}
-
-        /**
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function failUnauthorized(string $message = '') {}
-
-        /**
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function failForbidden(string $message = '') {}
-
-        /**
-         * @param mixed $data
-         * @param int $statusCode
-         * @param string $message
-         * @return \CodeIgniter\HTTP\ResponseInterface
-         */
-        public function fail(mixed $data = null, int $statusCode = 400, string $message = '') {}
-    }
-}
-
-// ═════════════════════════════════════════════════════════════════════
-//  CodeIgniter\Controller — propiedades de request/validator
-// ═════════════════════════════════════════════════════════════════════
-
-namespace CodeIgniter {
-    class Controller
-    {
-        /** @var \CodeIgniter\HTTP\IncomingRequest */
-        protected $request;
-
-        /** @var \CodeIgniter\HTTP\ResponseInterface */
-        protected $response;
-
-        /** @var \CodeIgniter\Validation\Validation|null */
-        protected $validator;
-    }
-}
-
-// ═════════════════════════════════════════════════════════════════════
-//  CodeIgniter\Entity\Exceptions\CastException (LSP false positives)
-// ═════════════════════════════════════════════════════════════════════
-
-namespace CodeIgniter\Entity\Exceptions {
-    class CastException extends \RuntimeException {}
-}

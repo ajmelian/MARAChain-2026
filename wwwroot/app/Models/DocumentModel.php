@@ -54,6 +54,8 @@ class DocumentModel extends Model
         'manifest_hash',
         'manifest_json',
         'cid',
+        'ipfs_cid',
+        'blockchain_tx_id',
         'encryption_format',
         'content_cipher',
         'sealed_at',

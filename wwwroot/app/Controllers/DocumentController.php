@@ -157,4 +157,34 @@ class DocumentController extends BaseController
 
         return $this->respondNoContent();
     }
+
+    /**
+     * Destroy a document (CU-DELETE-001).
+     *
+     * Removes ipfs_cid to orphan the ciphertext in IPFS.
+     * Preserves blockchain_tx_id for audit trail.
+     *
+     * @param string $id Document UUID
+     *
+     * @return ResponseInterface
+     *
+     * @since 1.8.0
+     */
+    public function destroy(string $id): ResponseInterface
+    {
+        $document = $this->documentModel->find($id);
+
+        if ($document === null) {
+            return $this->failNotFound('Document not found.');
+        }
+
+        $storage = new \App\Services\StorageService();
+        $ok      = $storage->destroyDocument($id);
+
+        if (! $ok) {
+            return $this->fail('Failed to destroy document.', 500);
+        }
+
+        return $this->respondNoContent();
+    }
 }

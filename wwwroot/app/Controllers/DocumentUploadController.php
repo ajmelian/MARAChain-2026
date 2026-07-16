@@ -80,11 +80,12 @@ class DocumentUploadController extends BaseController
             return $this->respondCreated([
                 'status' => 'success',
                 'data'   => [
-                    'documentId'    => $doc->id,
-                    'title'         => $doc->title,
+                    'documentId'     => $doc->id,
+                    'title'          => $doc->title,
                     'fileHashSha256' => $doc->fileHashSha256,
-                    'status'        => $doc->status,
-                    'encryptedAt'   => (string) $doc->encryptedAt,
+                    'status'         => $doc->status,
+                    'encryptedAt'    => (string) $doc->encryptedAt,
+                    'ipfsCid'        => $doc->ipfsCid,
                 ],
             ]);
         } catch (\RuntimeException $e) {

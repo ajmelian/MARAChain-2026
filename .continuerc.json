@@ -1,0 +1,51 @@
+{
+  "models": [
+    {
+      "title": "DeepSeek V4 Pro (LYCEUM)",
+      "provider": "openai",
+      "model": "deepseek/deepseek-v4-pro",
+      "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+      "apiKey": "LYCEUM_API_KEY",
+      "completionOptions": {}
+    },
+    {
+      "title": "DeepSeek V4 Flash (LYCEUM)",
+      "provider": "openai",
+      "model": "deepseek/deepseek-v4-flash",
+      "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+      "apiKey": "LYCEUM_API_KEY",
+      "completionOptions": {}
+    },
+    {
+      "title": "GLM 5.2 (LYCEUM)",
+      "provider": "openai",
+      "model": "z-ai/glm-5.2",
+      "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+      "apiKey": "LYCEUM_API_KEY",
+      "completionOptions": {}
+    },
+    {
+      "title": "GLM 5.2 Instant (LYCEUM)",
+      "provider": "openai",
+      "model": "z-ai/glm-5.2-instant",
+      "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+      "apiKey": "LYCEUM_API_KEY",
+      "completionOptions": {}
+    },
+    {
+      "title": "Qwen3 Coder 30B (LYCEUM)",
+      "provider": "openai",
+      "model": "qwen/qwen3-coder-30b-a3b-instruct",
+      "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+      "apiKey": "LYCEUM_API_KEY",
+      "completionOptions": {}
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "DeepSeek V4 Flash (LYCEUM)",
+    "provider": "openai",
+    "model": "deepseek/deepseek-v4-flash",
+    "apiBase": "https://api.lyceum.technology/api/v2/external/serverless",
+    "apiKey": "LYCEUM_API_KEY"
+  }
+}

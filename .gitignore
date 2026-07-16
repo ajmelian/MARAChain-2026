@@ -4,6 +4,7 @@ Thumbs.db
 
 # ── MARAChain internal tooling ──
 .opencode/*
+opencode.sh
 
 # ── Sensitive config ──
 */.env
@@ -21,6 +22,10 @@ wwwroot/writable/session/*
 wwwroot/writable/uploads/*
 wwwroot/writable/db/*
 wwwroot/build/*
+
+# ── SonarQube scanner working directory ──
+.scannerwork/
+wwwroot/.scannerwork/
 
 # ── IDE ──
 .idea/

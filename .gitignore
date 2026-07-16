@@ -30,8 +30,6 @@ wwwroot/.scannerwork/
 # ── IDE (local config; project-wide settings like mcp.json are tracked) ──
 .idea/
 .vscode/
-!.vscode/mcp.json
-!vscode/*.code-snippets
 *.swp
 *.swo
 

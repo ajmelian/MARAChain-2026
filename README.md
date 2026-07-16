@@ -84,8 +84,9 @@ Identificacion (FNMT)
 | Lenguaje | PHP | 8.5 |
 | Base de datos | MySQL | 8.x |
 | Testing | PHPUnit (SQLite :memory:) | 10.x |
-| Static Analysis | PHPStan | 2.x (dev) |
+| Static Analysis | PHPStan CI4 | 2.x (dev) |
 | Autenticacion | SHIELD | 1.3.x |
+| Pagos | Stripe PHP SDK | 21.x |
 | Almacenamiento | IPFS privado (cluster) | - |
 | API Docs | OpenAPI 3.1 + Swagger UI | - |
 | Frontend | Bootstrap 5.3 + PWA + WebCrypto | Latest |
@@ -258,7 +259,7 @@ composer audit                   # Auditoria de dependencias
 
 - **Fase**: MVP (Pre-alpha)
 - **Tests**: 284 tests, 707 assertions en 33 archivos (SQLite :memory:)
-- **OpenSpec**: 64/66 tareas completadas (Fases 1-7 finalizadas, Fase 8 E2E pendiente)
+- **OpenSpec**: 65/66 tareas completadas (Fases 1-7 + Documentacion finalizadas, solo Fase 8 E2E pendiente)
 - **Entidades**: 9 implementadas
 - **Migraciones**: 17 implementadas (9 core + 2 auth/shield + 1 linkage + 2 notifications + 2 settings + 1 ipfs/blockchain)
 - **Modelos**: 10 implementados

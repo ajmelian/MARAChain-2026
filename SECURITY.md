@@ -200,7 +200,9 @@ composer audit
 | `codeigniter4/framework` | `^4.7` | Comunidad activa |
 | `codeigniter4/shield` | `^1.3` | Auth oficial CI4 |
 | `codeigniter4/settings` | `^2.3` | Settings oficial CI4 |
+| `stripe/stripe-php` | `^21.0` | Stripe oficial |
 | `phpunit/phpunit` | `^10.5.16` | Dev only |
+| `codeigniter/phpstan-codeigniter` | `^2.1` | Dev only |
 | `fakerphp/faker` | `^1.9` | Dev only |
 | `mikey179/vfsstream` | `^1.6` | Dev only |
 

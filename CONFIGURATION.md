@@ -45,7 +45,7 @@ All values can be overridden via `.env` using the format `database.default.{key}
 | `database.default.username` | `root` | Yes | MySQL user |
 | `database.default.password` | `root` | Yes | MySQL password |
 | `database.default.DBDriver` | `MySQLi` | Yes | Database driver |
-| `database.default.DBPrefix` | ` ` | No | Table prefix |
+| `database.default.DBPrefix` | ` ` | No | Table prefix (e.g., `db_`) |
 | `database.default.port` | `3306` | No | MySQL port |
 | `database.default.charset` | `utf8mb4` | No | Character set |
 | `database.default.DBCollat` | `utf8mb4_general_ci` | No | Collation |
@@ -177,7 +177,7 @@ php -r "echo 'encryption.hmacKey = ' . bin2hex(random_bytes(32)) . PHP_EOL;"
 
 ### `app/Config/Routes.php`
 
-70+ total routes defined:
+75+ total routes defined:
 
 | Group | Routes | Filter |
 |-------|--------|--------|
@@ -198,12 +198,26 @@ MARAChain uses email for notification delivery (SMTP):
 # .env
 email.fromEmail = 'noreply@marachain.example.com'
 email.fromName = 'MARAChain'
+email.protocol = 'smtp'
 email.SMTPHost = 'smtp.example.com'
 email.SMTPPort = 587
+email.SMTPCrypto = 'tls'
 email.SMTPUser = 'smtp_user'
 email.SMTPPass = 'smtp_password'
-email.protocol = 'smtp'
 ```
+
+### Email Environment Variables
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `email.fromEmail` | `noreply@marachain.local` | Yes | Sender email address |
+| `email.fromName` | `MARAChain` | No | Sender display name |
+| `email.protocol` | `mail` | Yes | Protocol: `mail`, `sendmail`, `smtp` |
+| `email.SMTPHost` | `localhost` | If protocol=smtp | SMTP server hostname |
+| `email.SMTPPort` | `25` | If protocol=smtp | SMTP port |
+| `email.SMTPCrypto` | ` ` | No | Encryption: `tls`, `ssl`, or empty |
+| `email.SMTPUser` | ` ` | If SMTP auth | SMTP username |
+| `email.SMTPPass` | ` ` | If SMTP auth | SMTP password |
 
 ---
 
@@ -270,6 +284,7 @@ Las credenciales se almacenan **fuera de `wwwroot/`** en:
 | PHPStan CI4 (static analysis) | Active (dev) | 1.8.0 |
 | SonarQube integration | Active | 1.8.0 |
 | Blockchain anchoring (external DLT) | Planned | - |
+| Stripe payment integration | Planned | 1.8.0 (SDK) |
 | Playwright E2E tests | Planned | - |
 | Multi-tenancy | Planned | - |
 

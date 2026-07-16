@@ -37,6 +37,8 @@
 # database.default.DBDriver = MySQLi
 # database.default.DBPrefix =
 # database.default.port = 3306
+# database.default.charset = utf8mb4
+# database.default.DBCollat = utf8mb4_general_ci
 
 # If you use MySQLi as tests, first update the values of Config\Database::$tests.
 # database.tests.hostname = localhost
@@ -59,8 +61,8 @@
 # MARACHain - Encryption & Auth keys
 #--------------------------------------------------------------------
 
-# encryption.hmacKey =      # HMAC key for tax ID lookups (64+ random chars)
-# encryption.key =           # AES-256-GCM key for TOTP secrets at rest
+# encryption.key =           # AES-256-GCM key for TOTP secrets at rest (32 bytes = 64 hex chars)
+# encryption.hmacKey =        # HMAC key for tax ID lookups (64+ random chars)
 
 #--------------------------------------------------------------------
 # EMAIL
@@ -71,6 +73,7 @@
 # email.protocol  = mail         # mail, sendmail, smtp
 # email.SMTPHost  = localhost
 # email.SMTPPort  = 25
+# email.SMTPCrypto =              # tls, ssl, or empty
 # email.SMTPUser  =
 # email.SMTPPass  =
 

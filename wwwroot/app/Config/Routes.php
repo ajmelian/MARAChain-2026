@@ -109,6 +109,7 @@ $routes->group('', ['filter' => 'api-auth'], static function (RouteCollection $r
         $routes->post('(:segment)/seal', 'DocumentController::seal/$1');
         $routes->delete('(:segment)',    'DocumentController::delete/$1');
     $routes->post('(:segment)/destroy', 'DocumentController::destroy/$1');
+    $routes->get('(:segment)/access', 'DocumentAccessController::access/$1');
     });
 
     // ── Transfers ───────────────────────────────────────────────

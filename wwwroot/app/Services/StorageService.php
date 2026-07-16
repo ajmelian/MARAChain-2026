@@ -243,6 +243,42 @@ class StorageService
     }
 
     /**
+     * Retrieve data from IPFS by CID.
+     *
+     * @param string $cid Content identifier
+     *
+     * @return string|null Raw binary data, or null on failure
+     *
+     * @since 1.9.0
+     */
+    public function retrieveFromIpfs(string $cid): ?string
+    {
+        try {
+            $ch = curl_init($this->ipfsApiUrl . 'cat?arg=' . urlencode($cid));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 30,
+            ]);
+
+            $data = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || $data === false) {
+                log_message('error', 'IPFS cat failed for ' . $cid);
+
+                return null;
+            }
+
+            return $data;
+        } catch (\Throwable $e) {
+            log_message('error', 'IPFS retrieve exception: ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
      * Check IPFS node health.
      *
      * @return array{connected: bool, peerId?: string, error?: string}

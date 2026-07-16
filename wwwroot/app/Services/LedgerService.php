@@ -480,9 +480,136 @@ class LedgerService
         return $block;
     }
 
-    // ═════════════════════════════════════════════════════════════════
-    //  Helpers
-    // ═════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
+//  Merkle Proofs
+// ═════════════════════════════════════════════════════════════════
+
+    /**
+     * Generate a Merkle proof for a given event.
+     *
+     * Finds the ledger block that contains the event by its eventId,
+     * computes the Merkle tree for that block, and returns the
+     * proof path: sibling hashes + direction bits from leaf to root.
+     *
+     * The proof is verified without downloading the full ledger.
+     *
+     * @param string $eventId Event UUID
+     *
+     * @return array|null Merkle proof, or null if event is not found
+     *
+     * @since 1.9.0
+     */
+    public function generateProof(string $eventId): ?array
+    {
+        // ── Find block containing this event ──────────────────────
+        $rows = $this->ledgerBlockModel->db->table('ledger_blocks')
+            ->orderBy('block_number', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $foundBlock = null;
+        $leafIndex  = -1;
+
+        foreach ($rows as $row) {
+            $events = json_decode($row['events_json'], true);
+            if (! is_array($events)) {
+                continue;
+            }
+            foreach ($events as $idx => $event) {
+                if (($event['eventId'] ?? '') === $eventId) {
+                    $foundBlock = $row;
+                    $leafIndex  = $idx;
+                    break 2;
+                }
+            }
+        }
+
+        if ($foundBlock === null || $leafIndex < 0) {
+            return null;
+        }
+
+        $events = json_decode($foundBlock['events_json'], true);
+        $leafHashes = array_map(
+            static fn (array $e) => $e['payloadHash'],
+            $events
+        );
+
+        // ── Compute Merkle tree and proof path ────────────────────
+        $proof = $this->computeMerkleProof($leafHashes, $leafIndex);
+
+        if ($proof === null) {
+            return null;
+        }
+
+        return [
+            'eventId'          => $eventId,
+            'leafHash'         => $leafHashes[$leafIndex],
+            'leafIndex'        => $leafIndex,
+            'siblings'         => $proof['siblings'],
+            'directions'       => $proof['directions'],
+            'merkleRoot'       => $foundBlock['merkle_root'],
+            'blockNumber'      => (int) $foundBlock['block_number'],
+            'blockHash'        => $foundBlock['block_hash'],
+            'blockSignature'   => $foundBlock['block_signature'],
+            'signingKeyFingerprint' => $foundBlock['signing_key_fingerprint'],
+            'sealedAt'         => $foundBlock['sealed_at'],
+            'schemaVersion'    => $foundBlock['schema_version'] ?? '1.0',
+        ];
+    }
+
+    /**
+     * Compute a Merkle proof for a specific leaf.
+     *
+     * @param string[] $hashes   All leaf hashes (payload_hash from events)
+     * @param int      $leafIndex Index of the target leaf
+     *
+     * @return array{siblings: string[], directions: string[]}|null
+     *
+     * @since 1.9.0
+     */
+    private function computeMerkleProof(array $hashes, int $leafIndex): ?array
+    {
+        if ($hashes === []) {
+            return null;
+        }
+
+        $currentLevel = array_map([$this, 'hexToBin'], $hashes);
+        $siblings     = [];
+        $directions   = [];
+
+        while (count($currentLevel) > 1) {
+            // Pad odd levels
+            if (count($currentLevel) % 2 !== 0) {
+                $currentLevel[] = end($currentLevel);
+            }
+
+            $newLevel = [];
+            $newIndex = -1;
+
+            for ($i = 0, $count = count($currentLevel); $i < $count; $i += 2) {
+                $hash = hash('sha256', $currentLevel[$i] . $currentLevel[$i + 1], true);
+                $newLevel[] = $hash;
+
+                if ($i === $leafIndex || $i + 1 === $leafIndex) {
+                    // The other sibling is the proof
+                    $siblingIdx = ($i === $leafIndex) ? $i + 1 : $i;
+                    if ($siblingIdx < $count) {
+                        $siblings[]   = bin2hex($currentLevel[$siblingIdx]);
+                        $directions[] = ($i === $leafIndex) ? 'right' : 'left';
+                    }
+                    $newIndex = intdiv($i, 2);
+                }
+            }
+
+            $currentLevel = $newLevel;
+            $leafIndex    = $newIndex;
+        }
+
+        return [
+            'siblings'   => $siblings,
+            'directions' => $directions,
+        ];
+    }
 
     /**
      * Convert a hex string to raw binary.

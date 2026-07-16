@@ -10,12 +10,12 @@ use App\Models\UserModel;
 /**
  * ProfileController — User profile with real SHIELD data.
  *
- * Displays user identity, TOTP status, active sessions/devices,
- * and eIDAS guarantee level.
+ * Displays user identity, TOTP status, real SHIELD sessions,
+ * and active devices from the database.
  *
  * @package App\Controllers\Web
- * @author  Aythami
- * @since   1.3.0
+ * @author  Aythami Melián Perdomo <ajmelper@gmail.com>
+ * @since   1.9.0
  */
 class ProfileController extends BaseWebController
 {
@@ -23,8 +23,6 @@ class ProfileController extends BaseWebController
      * GET /profile — Show authenticated user's profile.
      *
      * @return string Rendered HTML
-     *
-     * @since 1.3.0
      */
     public function index(): string
     {
@@ -41,13 +39,22 @@ class ProfileController extends BaseWebController
         $userModel  = model(UserModel::class);
         $customUser = $userModel->findByShieldUserId($shieldUser->id ?? 0);
 
-        // ── Load devices ──────────────────────────────────────────
+        // ── Load real devices ─────────────────────────────────────
         $deviceModel = model(DeviceModel::class);
         $devices     = [];
 
         if ($customUser !== null) {
-            $devices = $deviceModel->findByUserId($customUser->id);
+            $devices = $deviceModel->findActiveByUserId($customUser->id);
         }
+
+        // ── Load SHIELD auth identities and sessions ──────────────
+        $db          = db_connect();
+        $shieldSessions = $db->table('auth_logins')
+            ->where('user_id', $shieldUser->id ?? 0)
+            ->orderBy('date', 'DESC')
+            ->limit(5)
+            ->get()
+            ->getResultArray();
 
         // ── Build profile data ────────────────────────────────────
         $profile = [
@@ -65,6 +72,7 @@ class ProfileController extends BaseWebController
             'lastLoginAt'     => $customUser?->lastLoginAt ?? null,
             'shieldUserId'    => $shieldUser->id ?? 0,
             'username'        => $shieldUser->username ?? '',
+            'shieldSessions'  => $shieldSessions,
             'createdAt'       => $shieldUser->created_at
                 ? (is_string($shieldUser->created_at)
                     ? $shieldUser->created_at

@@ -292,7 +292,7 @@ class DocumentTransferModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): DocumentTransfer
+    public function freshEntity(string $id): DocumentTransfer
     {
         $row = $this->db->table($this->table)
             ->where('id', $id)

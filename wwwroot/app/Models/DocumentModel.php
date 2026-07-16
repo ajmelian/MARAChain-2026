@@ -328,7 +328,7 @@ class DocumentModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): Document
+    public function freshEntity(string $id): Document
     {
         $row = $this->db->table($this->table)
             ->where('id', $id)

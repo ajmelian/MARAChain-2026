@@ -146,6 +146,7 @@ class FnmtController extends BaseWebController
         ], $userAgent);
 
         // ── Check TOTP status ────────────────────────────────────
+        /** @var \App\Entities\User|null $freshUser */
         $freshUser = $this->userModel->find($customUser->id);
 
         if ($freshUser && $freshUser->totpEnabled) {
@@ -185,6 +186,7 @@ class FnmtController extends BaseWebController
         }
 
         if ($this->request->getMethod() === 'GET') {
+            /** @var \App\Entities\User|null $user */
             $user = $this->userModel->find($userId);
 
             // ── Generate TOTP secret ─────────────────────────────
@@ -266,6 +268,7 @@ class FnmtController extends BaseWebController
 
         // ── POST: Validate TOTP ──────────────────────────────────
         $code = $this->request->getPost('totp_code');
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
 
         if ($user === null) {

@@ -44,3 +44,4 @@ node_modules/
 .mcp.json
 .env.continue.local
 logs/
+node_modules/\ntest-results/\nplaywright-report/\n

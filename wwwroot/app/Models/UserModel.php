@@ -296,7 +296,7 @@ class UserModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): User
+    public function freshEntity(string $id): User
     {
         $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 

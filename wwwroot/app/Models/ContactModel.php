@@ -230,7 +230,7 @@ class ContactModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): Contact
+    public function freshEntity(string $id): Contact
     {
         $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 

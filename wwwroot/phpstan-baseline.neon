@@ -1,0 +1,385 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$id of method App\\Models\\NotificationModel\:\:markAsSending\(\) expects string, App\\Entities\\Notification given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Commands/NotificationSend.php
+
+		-
+			message: '#^Parameter \#1 \$id of method App\\Models\\NotificationModel\:\:markAsSent\(\) expects string, App\\Entities\\Notification given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Commands/NotificationSend.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Commands/QueueWork.php
+
+		-
+			message: '#^While loop condition is always true\.$#'
+			identifier: while.alwaysTrue
+			count: 1
+			path: app/Commands/QueueWork.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$contact \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$device \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$document \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$evidence \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$ledger \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$notification \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$signature \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$transfer \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Property Config\\Validation\:\:\$user \(array\<string, array\<int, array\<string, string\>\|string\>\>\) does not accept default value of type array\<string, array\<string, array\<string, string\>\|string\>\>\.$#'
+			identifier: property.defaultValue
+			count: 1
+			path: app/Config/Validation.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Controllers/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\ContactController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Contact given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\ContactController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Contact\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\ContactController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Contact given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\DeviceController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Device given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/DeviceController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\DeviceController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Device given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/DeviceController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\DocumentController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Document given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Controllers/DocumentController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\DocumentController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Document given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/DocumentController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/DocumentUploadController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\EvidenceController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Evidence given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/EvidenceController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\LedgerController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\LedgerBlock given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/LedgerController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\LedgerController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, list\<App\\Entities\\LedgerBlock\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/LedgerController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\NotificationController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\Notification given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/NotificationController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\NotificationController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, list\<App\\Entities\\Notification\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/NotificationController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\SignatureController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\SignatureRequest given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/SignatureController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\SignatureController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\SignatureRequest given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/SignatureController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\TransferController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\DocumentTransfer given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Controllers/TransferController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\TransferController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, list\<App\\Entities\\DocumentTransfer\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/TransferController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\TransferController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\DocumentTransfer given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/TransferController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Entities\\DocumentTransfer and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Controllers/TransferController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\UserController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\User given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\UserController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\UserController\:\:respond\(\) expects array\<string, mixed\>\|string\|null, list\<App\\Entities\\User\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Controllers\\UserController\:\:respondCreated\(\) expects array\<string, mixed\>\|string\|null, App\\Entities\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/UserController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/BaseWebController.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Models\\UserModel\:\:enableTotp\(\) expects App\\Entities\\User, list\<App\\Entities\\User\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Controllers/Web/FnmtController.php
+
+		-
+			message: '#^Property App\\Controllers\\Web\\FnmtController\:\:\$x509 is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Controllers/Web/FnmtController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>emailVerifiedAt" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>firstName" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>guaranteeLevel" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>identityType" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>lastLoginAt" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>lastName" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>legalName" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>phone" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>status" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>totpEnabled" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Entities\\DocumentTransfer and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 3
+			path: app/Controllers/Web/TransfersController.php
+
+		-
+			message: '#^Call to an undefined method CodeIgniter\\HTTP\\RequestInterface\:\:getPath\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Filters/Throttle.php
+
+		-
+			message: '#^Variable \$ip on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: app/Filters/Throttle.php
+
+		-
+			message: '#^Match arm comparison between ''DESTROYED'' and ''DESTROYED'' is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: app/Models/DocumentModel.php
+
+		-
+			message: '#^Offset ''documentId'' on non\-empty\-array\<string, mixed\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/DocumentTransferModel.php
+
+		-
+			message: '#^Offset ''recipientId'' on non\-empty\-array\<string, mixed\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/DocumentTransferModel.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between array\|null and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/NotificationModel.php
+
+		-
+			message: '#^Method App\\Models\\UserModel\:\:freshEntities\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Models/UserModel.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between App\\Entities\\DocumentTransfer and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/PaymentService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between array and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/QueueService.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and false will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/StorageService.php
+
+		-
+			message: '#^Method App\\Services\\TimestampService\:\:timestamp\(\) should return array\{receipt\: array, block\: array\} but returns array\{receipt\: array\{hash\: string, context\: string, eventId\: string, blockNumber\: int, blockHash\: string, sealedAt\: string, signature\: string, merkleProof\: array\|null\}, block\: App\\Entities\\LedgerBlock\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/TimestampService.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/X509Service.php

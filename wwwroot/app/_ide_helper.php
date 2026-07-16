@@ -86,3 +86,4 @@ if (! function_exists('base_url')) {
     /** @return string */
     function base_url(?string $uri = null): string {}
 }
+

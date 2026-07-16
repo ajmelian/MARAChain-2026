@@ -210,7 +210,7 @@ class UserController extends BaseController
             return $this->failUnauthorized('Authentication required.');
         }
 
-        /** @var \App\Models\UserModel $userModel */
+        /** @var \App\Entities\User|null $customUser */
         $customUser = model(\App\Models\UserModel::class)->findByShieldUserId($shieldUser->id ?? 0);
         if ($customUser === null || $customUser->id !== $id) {
             return $this->failForbidden('You can only enable TOTP for your own account.');

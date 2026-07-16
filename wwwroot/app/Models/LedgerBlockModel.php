@@ -190,7 +190,7 @@ class LedgerBlockModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): LedgerBlock
+    public function freshEntity(string $id): LedgerBlock
     {
         $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 

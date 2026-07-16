@@ -288,7 +288,7 @@ class NotificationModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): Notification
+    public function freshEntity(string $id): Notification
     {
         $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 

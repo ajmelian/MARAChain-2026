@@ -37,9 +37,6 @@ class Throttle implements FilterInterface
         'api'  => ['max' => 60, 'decay' => 60],
     ];
 
-    /**
-     * @param array|null $arguments Key name from LIMITS constant
-     */
     public function __construct()
     {
         $this->maxAttempts  = 6;
@@ -50,7 +47,7 @@ class Throttle implements FilterInterface
     /**
      * Inspect the request and rate-limit if needed.
      *
-     * @param RequestInterface $request  Incoming request
+     * @param RequestInterface $request   Incoming request
      * @param array|null       $arguments Filter arguments (e.g. ['auth'])
      *
      * @return RequestInterface|ResponseInterface|null

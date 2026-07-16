@@ -240,7 +240,7 @@ class EvidenceModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): Evidence
+    public function freshEntity(string $id): Evidence
     {
         $row = $this->db->table($this->table)->where('id', $id)->get()->getRowArray();
 

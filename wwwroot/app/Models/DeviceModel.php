@@ -196,7 +196,7 @@ class DeviceModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): Device
+    public function freshEntity(string $id): Device
     {
         $row = $this->db->table($this->table)
             ->where('id', $id)

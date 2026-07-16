@@ -175,8 +175,6 @@ class LedgerService
      *   9. Update each evidence record with the ledger block number.
      *   10. Return the sealed block.
      *
-     * @param string $signingKeyFingerprint Ed25519 signing key fingerprint (64 hex chars)
-     *
      * @return array{block: \App\Entities\LedgerBlock, eventCount: int, merkleRoot: string}|null
      *
      * @since 1.4.0
@@ -293,7 +291,7 @@ class LedgerService
      */
     public function verifyChain(): array
     {
-        $rows = $this->ledgerBlockModel->db->table($this->ledgerBlockModel->table)
+        $rows = $this->ledgerBlockModel->db->table('ledger_blocks')
             ->orderBy('block_number', 'ASC')
             ->get()
             ->getResultArray();
@@ -420,8 +418,6 @@ class LedgerService
      *
      * The genesis block has no previous hash and contains a single
      * placeholder event marking the creation of the ledger.
-     *
-     * @param string $signingKeyFingerprint Ed25519 signing key fingerprint
      *
      * @return \App\Entities\LedgerBlock The genesis block entity
      *

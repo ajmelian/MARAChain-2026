@@ -253,7 +253,7 @@ class SignatureRequestModel extends Model
      *
      * @since 1.1.1
      */
-    private function freshEntity(string $id): SignatureRequest
+    public function freshEntity(string $id): SignatureRequest
     {
         $row = $this->db->table($this->table)
             ->where('id', $id)

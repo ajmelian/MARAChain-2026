@@ -1,6 +1,6 @@
 # Security Policy
 
-> **Version:** 1.7.0 | **Last Updated:** 2026-07-16
+> **Version:** 1.8.0 | **Last Updated:** 2026-07-16
 
 MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evidencias criptograficas. La seguridad es un requisito fundamental, no una caracteristica opcional.
 
@@ -10,9 +10,9 @@ MARAChain maneja documentos confidenciales, datos de identidad (NIF/NIE), y evid
 
 | Version | Status | Security Support |
 |---------|--------|-----------------|
-| 1.7.0 (pre-alpha) | In Development | Not yet in production |
+| 1.8.0 (pre-alpha) | In Development | Not yet in production |
+| 1.7.0 (pre-alpha) | EOL (superseded by 1.8.0) | Not released |
 | 1.6.0 (pre-alpha) | EOL (superseded by 1.7.0) | Not released |
-| 1.5.0 (pre-alpha) | EOL (superseded by 1.6.0) | Not released |
 
 Once in production, only the latest `MAJOR.MINOR` release will receive security patches.
 
@@ -124,10 +124,11 @@ $this->where('email', $email)->first();
 - Requiere sesion SHIELD activa con permisos de grupo
 - Rutas publicas: `/health` (health check)
 
-### 11. FNMT TOTP Rate Limiting
+### 11. FNMT TOTP + GET Rate Limiting
 
-- `throttle:auth` aplicado a rutas TOTP FNMT (POST)
-- Limite de 6 req/min para prevenir brute-force de codigos TOTP
+- `throttle:auth` aplicado a rutas TOTP FNMT (POST) y autenticacion FNMT (GET)
+- Limite de 6 req/min para prevenir brute-force de codigos TOTP y enumeracion de certificados
+- Corrige AP-3 (audit v1.2.1) y P2-4 (backlog)
 
 ### 12. Ciphertext Envelope Validation (StorageService)
 
@@ -146,6 +147,20 @@ $this->where('email', $email)->first();
 - `incrementoTotpFailures()` y `incrementAttemptCount()` usan `SET col = col + 1` atomico
 - `sealBlock()` envuelto en transaccion BD con rollback en fallo
 - State transitions con guarda atomica `->where('status', $row['status'])`
+
+### 15. IPFS Private Cluster Security
+
+- Cluster IPFS privado: documentos solo accesibles desde nodos autorizados
+- Ciphertext almacenado en IPFS (nunca plaintext): la DEK nunca sale del cliente
+- `IpfsReconcile` verifica integridad cross-referenciando CID en BD vs IPFS
+- Sin exposicion a IPFS publico (swarm keys privadas)
+
+### 16. Merkle Proofs (Inclusion Verification)
+
+- `LedgerService::generateProof(eventId)` genera prueba criptografica verificable
+- Tercero puede verificar inclusion con solo `merkle_root` del bloque
+- Sin necesidad de descargar el ledger completo
+- Resistente a tampering: cualquier modificacion invalida la prueba
 
 ---
 

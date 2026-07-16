@@ -1,6 +1,6 @@
 # Configuration Guide
 
-> **Version:** 1.7.0 | **Last Updated:** 2026-07-16
+> **Version:** 1.8.0 | **Last Updated:** 2026-07-16
 
 This document describes all configuration options for the MARAChain application.
 
@@ -236,16 +236,21 @@ Las credenciales se almacenan **fuera de `wwwroot/`** en:
 | SHIELD authentication | Active | 1.2.0 |
 | TOTP 2FA | Active | 1.2.1 (AES-256-GCM) |
 | Rate limiting (Throttle) | Active | 1.2.0 |
-| Health check endpoint | Active | 1.2.0 |
-| Web frontend (Bootstrap 5 + Alpino) | Active | 1.2.0 |
-| CLI commands (ledger, notifications) | Active | 1.2.0 |
+| Health check endpoint | Active | 1.2.0 (ampliado 1.8.0) |
+| Web frontend (Bootstrap 5.3 + Alpino) | Active | 1.8.0 (BS5 migrado) |
+| PWA (manifest + service worker) | Active | 1.8.0 |
+| CLI commands (ledger, notifications, transfers, ipfs) | Active | 1.8.0 (5 commands) |
 | Service layer (ports & adapters) | Active | 1.2.0 |
 | FNMT certificate auth (mTLS) | Active | 1.4.0 |
+| FNMT GET rate limiting | Active | 1.8.0 |
 | Document upload with ciphertext (StorageService) | Active | 1.4.0 |
+| IPFS private cluster storage | Active | 1.8.0 |
+| IpfsReconcile command | Active | 1.8.0 |
 | Evidence recording (EvidenceService) | Active | 1.4.0 |
 | SHIELD-user linkage (BaseWebController) | Active | 1.4.0 |
 | Dropzone JS + MARACrypto client encryption | Active | 1.4.0 |
 | Deploy scripts (staging/prod) | Active | 1.4.0 |
+| Systemd workers (notifications, ledger-seal, transfers-expire) | Active | 1.8.0 |
 | Notification system (multi-channel outbox) | Active | 1.5.0 |
 | Email notification provider (SMTP) | Active | 1.5.0 |
 | WhatsApp notification provider | Stub | 1.5.0 |
@@ -258,8 +263,12 @@ Las credenciales se almacenan **fuera de `wwwroot/`** en:
 | NotificationRequestedModel (outbox model) | Active | 1.6.0 |
 | TimestampService | Active | 1.7.0 |
 | TimestampController (REST) | Active | 1.7.0 |
+| Timestamp receipt endpoint (Merkle proof) | Active | 1.8.0 |
 | IPFS CID + blockchain anchor columns | Active | 1.7.0 |
-| IPFS integration | Planned | - |
+| Merkle proofs (generateProof) | Active | 1.8.0 |
+| OpenAPI 3.1 + Swagger UI | Active | 1.8.0 |
+| PHPStan CI4 (static analysis) | Active (dev) | 1.8.0 |
+| SonarQube integration | Active | 1.8.0 |
 | Blockchain anchoring (external DLT) | Planned | - |
 | Playwright E2E tests | Planned | - |
 | Multi-tenancy | Planned | - |

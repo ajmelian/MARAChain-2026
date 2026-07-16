@@ -1,7 +1,7 @@
 # MARAChain
 
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com/ajmelian/MARAChain-2026)
-[![Version](https://img.shields.io/badge/version-1.7.0-blue)](./VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue)](./VERSION.md)
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4623?style=flat)](https://codeigniter.com/)
 [![SHIELD](https://img.shields.io/badge/SHIELD-1.3-EE4623?style=flat)](https://shield.codeigniter.com/)
@@ -11,6 +11,7 @@
 [![SonarQube Security](https://img.shields.io/badge/Security-A_(0_vulns)-brightgreen?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
 [![SonarQube Maintainability](https://img.shields.io/badge/Maintainability-A-0AA0FF?logo=sonarcloud)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
 [![Coverage](https://img.shields.io/badge/Coverage-42.1%25-yellow?logo=codecov)](https://sonarcloud.io/dashboard?id=ajmelian_marachain)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-85EA2D?style=flat&logo=openapiinitiative)](./docs/api/marachain-v1.yaml)
 
 > Plataforma de intercambio seguro de documentacion con firma electronica
 
@@ -83,10 +84,12 @@ Identificacion (FNMT)
 | Lenguaje | PHP | 8.5 |
 | Base de datos | MySQL | 8.x |
 | Testing | PHPUnit (SQLite :memory:) | 10.x |
+| Static Analysis | PHPStan | 2.x (dev) |
 | Autenticacion | SHIELD | 1.3.x |
-| Almacenamiento | IPFS privado | - |
-| Frontend | Bootstrap 5 + HTML5 + WebCrypto | Latest |
-| IaC | VPS remoto via SFTP | - |
+| Almacenamiento | IPFS privado (cluster) | - |
+| API Docs | OpenAPI 3.1 + Swagger UI | - |
+| Frontend | Bootstrap 5.3 + PWA + WebCrypto | Latest |
+| IaC | VPS remoto via SFTP + systemd workers | - |
 
 ## Requisitos Previos
 
@@ -136,12 +139,30 @@ MARAChain/
 │   ├── 05_CASOS_DE_USO.md
 │   ├── 06_FRONTEND_DESIGN.md
 │   └── 07_NOTIFICATIONS.md
+├── docs/                              # Documentos del cliente + API specs
+│   ├── api/
+│   │   └── marachain-v1.yaml          # OpenAPI 3.1 (46 endpoints, 29 schemas)
+│   ├── 00_FUENTE_DE_VERDAD.md
+│   ├── 01_RESUMEN_COMPLETO.md
+│   ├── 02_RESUMEN_EJECUTIVO.md
+│   ├── 03_PROYECTO_TECNICO.md
+│   ├── 04_ARCHITECTURE.md
+│   ├── 05_CASOS_DE_USO.md
+│   ├── 06_FRONTEND_DESIGN.md
+│   └── 07_NOTIFICATIONS.md
 ├── .opencode/openspec/                # Especificacion SDD + Roadmap + State
 ├── wwwroot/                           # Aplicacion CodeIgniter 4
 │   ├── app/
-│   │   ├── Commands/                  # 4 comandos CLI
+│   │   ├── Commands/                  # 5 comandos CLI
+│   │   │   ├── LedgerGenesis.php      # ledger:genesis
+│   │   │   ├── LedgerSeal.php         # ledger:seal
+│   │   │   ├── NotificationsCommand.php # notifications:send (multi-canal)
+│   │   │   ├── TransferExpire.php     # transfers:expire (cron)
+│   │   │   └── IpfsReconcile.php      # ipfs:reconcile (IPFS sync)
 │   │   ├── Config/                    # Routes, Validation, Filters, SHIELD config
-│   │   ├── Controllers/               # 12 REST + 6 Web + Health + Base
+│   │   ├── Controllers/               # 14 REST + 6 Web + Home
+│   │   │   └── Api/
+│   │   │       └── DocsController.php # Swagger UI (GET /api/docs)
 │   │   ├── Database/Migrations/       # 17 migraciones (9 core + 2 auth + 1 linkage + 2 notifications + 2 settings + 1 ipfs)
 │   │   ├── Entities/                  # 9 entidades (Entity CI4)
 │   │   ├── Filters/                   # SecurityHeaders, Throttle, api-auth
@@ -159,11 +180,22 @@ MARAChain/
 │   │   │       ├── WhatsAppNotificationProvider.php # Stub futuro
 │   │   │       ├── TelegramNotificationProvider.php # Stub futuro
 │   │   │       └── SmsNotificationProvider.php      # Stub futuro
-│   │   ├── Services/                  # 11 servicios + 4 interfaces
+│   │   ├── Services/                  # 11 servicios (6 impl + 5 interfaces)
 │   │   └── Validation/               # CustomRules
-│   ├── tests/                         # PHPUnit test suite (33 files)
+│   ├── tests/                         # PHPUnit test suite (33 files, 284 tests, 707 assertions)
 │   ├── public/                        # Document root
+│   │   ├── manifest.json              # PWA manifest
+│   │   ├── sw.js                      # PWA service worker (cache-first)
+│   │   └── assets/
+│   │       └── plugins/bootstrap/     # Bootstrap 5.3.3 CSS + JS
 │   └── writable/                      # Logs, cache, sesiones
+├── scripts/
+│   ├── deploy-staging.sh              # Deploy script staging
+│   ├── deploy-prod.sh                 # Deploy script produccion
+│   └── systemd/                       # Systemd service + timer units
+│       ├── marachain-notifications.service + .timer
+│       ├── marachain-ledger-seal.service + .timer
+│       └── marachain-transfers-expire.service + .timer
 ├── README.md                          # Este fichero
 ├── ARCHITECTURE.md                    # Decisiones de arquitectura
 ├── CHANGELOG.md                       # Registro de cambios
@@ -174,7 +206,6 @@ MARAChain/
 ├── AUDITORY.md                        # Trazabilidad de auditorias
 ├── TODO.md                            # Tareas pendientes
 ├── nginx-fnmt-mtls.conf               # Nginx mTLS configuration
-├── scripts/                           # Deploy scripts (staging, prod)
 ├── LICENSE                            # GPL-3.0-or-later
 └── .gitlab-ci.yml                     # Pipeline CI/CD
 ```
@@ -201,6 +232,12 @@ php spark shield:user create     # Crear usuario SHIELD
 php spark ledger:genesis         # Crear bloque genesis del ledger
 php spark ledger:seal            # Sellar evidencias en nuevo bloque
 php spark notifications:send     # Procesar notificaciones multi-canal pendientes
+php spark transfers:expire       # Expirar transferencias caducadas
+php spark ipfs:reconcile         # Sincronizar documentos con IPFS privado
+
+# API Documentation
+# Swagger UI: http://localhost:8080/api/docs (desarrollo)
+# OpenAPI spec: docs/api/marachain-v1.yaml
 
 # CodeIgniter
 php spark list                   # Listar comandos disponibles
@@ -220,19 +257,24 @@ composer audit                   # Auditoria de dependencias
 ## Estado del Proyecto
 
 - **Fase**: MVP (Pre-alpha)
-- **Tests**: ~500 assertions en 33 archivos (SQLite :memory:)
+- **Tests**: 284 tests, 707 assertions en 33 archivos (SQLite :memory:)
 - **OpenSpec**: 64/66 tareas completadas (Fases 1-7 finalizadas, Fase 8 E2E pendiente)
 - **Entidades**: 9 implementadas
 - **Migraciones**: 17 implementadas (9 core + 2 auth/shield + 1 linkage + 2 notifications + 2 settings + 1 ipfs/blockchain)
 - **Modelos**: 10 implementados
-- **Controladores REST**: 12 implementados (45+ endpoints, protegidos con api-auth)
+- **Controladores REST**: 14 implementados (46+ endpoints, protegidos con api-auth)
 - **Controladores Web**: 6 implementados (login, register, inbox, outbox, contacts, profile)
-- **Servicios**: 11 implementados (Identity, Signature, Encryption, Timestamp, Ledger, X509, Anchor, Storage, Evidence, TimestampService + 4 interfaces)
-- **CLI Commands**: 4 implementados (LedgerGenesis, LedgerSeal, NotificationsCommand, + legacy NotificationSend)
+- **Servicios**: 11 (6 implementaciones + 5 interfaces)
+- **CLI Commands**: 5 implementados (LedgerGenesis, LedgerSeal, NotificationsCommand, TransferExpire, IpfsReconcile)
 - **Validacion**: 9 grupos de reglas + 4 CustomRules
-- **Seguridad**: api-auth filter (rutas REST), Filtro SecurityHeaders activo (7 cabeceras OWASP), Rate Limiting (auth + FNMT TOTP), SHIELD auth, Nginx mTLS config
-- **Despliegue**: Scripts de deploy staging/prod, .env, nginx-fnmt-mtls.conf
-- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1), MVP feature audit (v1.4.0), notification system audit (v1.5.0), settings/api-auth audit (v1.6.0), documentation audit (v1.7.0)
+- **Seguridad**: api-auth filter (rutas REST), SecurityHeaders (7 cabeceras OWASP), Rate Limiting (auth + FNMT GET/TOTP), SHIELD auth, Nginx mTLS config
+- **Despliegue**: Scripts de deploy staging/prod, .env, nginx-fnmt-mtls.conf, systemd workers (3 services + 3 timers)
+- **API Docs**: OpenAPI 3.1 spec (3133 lines, 46 endpoints, 12 tags, 29 schemas) + Swagger UI
+- **IPFS**: Cluster privado con reconciliacion automatica (6 tareas IP implementadas)
+- **PWA**: manifest.json + service worker (cache-first, 14 static assets)
+- **Frontend**: Bootstrap 5.3.3 migrado desde BS4 en todas las vistas
+- **CI/CD**: PHPStan level 2, SonarQube integrado, ~~PHP 8.3~~ → PHP 8.5 en CI
+- **Auditoria**: 12 correcciones de seguridad aplicadas (v1.2.1), MVP feature audit (v1.4.0), notification system audit (v1.5.0), settings/api-auth audit (v1.6.0), documentation audit (v1.7.0), infra+ipfs+api audit (v1.8.0)
 
 ## Documentacion
 

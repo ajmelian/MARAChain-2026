@@ -6,10 +6,71 @@
 
 | Date | Version | Auditor | Scope | Findings | Status |
 |------|---------|---------|-------|----------|--------|
+| 2026-07-16 | 1.7.0 → 1.8.0 | Internal | Infraestructura, IPFS, API Docs, Seguridad: OpenAPI 3.1, IPFS cluster, Merkle proofs, systemd workers, Bootstrap 5.3, PWA, PHPStan, PHP 8.5, FNMT rate limiting | Actualizacion de 8 ficheros de documentacion: 7 nuevos ADRs (021-027), 5 comandos CLI, 14 REST controllers (nuevo DocsController), 75+ rutas (nuevas /api/docs, /api.yaml, /timestamps/{hash}/receipt), 284 tests (707 assertions). IPFS privado activo con reconciliacion. Systemd workers para notificaciones, ledger-seal, transfers-expire. Bootstrap 5.3 migrado. PWA funcional. | **Completada** |
 | 2026-07-16 | 1.6.0 → 1.7.0 | Internal | Documentacion completa, OpenSpec state sync, Phase 4 validacion, consistencia entre ficheros | Actualizacion de 8 ficheros de documentacion: README, ARCHITECTURE, CHANGELOG, VERSION, CONFIGURATION, SECURITY, AUDITORY, INSTALL. State tracker: 64/66 tareas completadas. 17th migration documentada. TimestampService y TimestampController documentados. | **Completada** |
 | 2026-07-16 | 1.5.0 → 1.6.0 | Internal | Settings table, context column, api-auth filter, NotificationRequestedModel, new tests | 2 migrations + 1 model + 1 filter + 10 test files: SHIELD settings DB-backed, API routes protected, FNMT TOTP rate-limited (AP-3 fixed) | **Completada** |
 | 2026-07-14 | 1.4.0 → 1.5.0 | Internal | Sistema de notificaciones: 14 archivos (Notifications/, Commands/, Migrations/) | Notifications system integrated: multi-channel outbox, Provider Pattern, global accounts, stubs for future channels | **Completada** |
 | 2026-07-14 | 1.2.0 → 1.4.0 | Internal | 33 archivos + 10 nuevos: controladores, servicios, migrations, deploy scripts | 16 defectos (12 corregidos, 4 pendientes), MVP features integrados | **Completada** |
+
+---
+
+## v1.8.0 — Infrastructure, IPFS, API Docs & Security Audit (2026-07-16)
+
+### Alcance
+
+- **Archivos revisados**: 8 archivos de documentacion + nuevos componentes de infraestructura + IPFS + API docs
+- **Nuevos componentes**: 5 comandos CLI, DocsController, OpenAPI spec, systemd units, PWA, BS5 migracion
+- **State tracker**: `.opencode/openspec/.state.yaml` — 66 atomic tasks
+
+### Nuevos ADR documentados
+
+| ID | Decision | Componente |
+|----|----------|------------|
+| ADR-021 | IPFS privado (cluster) con reconciliacion automatica | IpfsReconcile, StorageService |
+| ADR-022 | OpenAPI 3.1 + Swagger UI como documentacion viva | Api\DocsController, marachain-v1.yaml |
+| ADR-023 | Systemd workers para tareas periodicas | 3 services + 3 timers |
+| ADR-024 | Merkle proofs para verificacion de inclusion | LedgerService::generateProof() |
+| ADR-025 | Health check ampliado con metricas de infraestructura | HealthController |
+| ADR-026 | Bootstrap 5.3 migracion + PWA | 13 vistas, manifest.json, sw.js |
+| ADR-027 | Rate limiting en GET /auth/fnmt | Routes.php, Throttle filter |
+
+### Correcciones de backlog aplicadas
+
+| ID | Descripcion | Origen |
+|----|-------------|--------|
+| P1-8 | IPFS worker implementado (IpfsReconcile) | TODO.md |
+| P2-4 | Rate limiting en GET /auth/fnmt | TODO.md |
+| P2-6 | Merkle proofs via generateProof() | TODO.md |
+| P2-7 | sealBlock automatico via systemd timer | TODO.md |
+| P2-10 | Archivos systemd para workers | TODO.md |
+| P2-15 | PHP 8.5 en composer.json | TODO.md |
+| P2-16 | SonarQube integrado con badges | TODO.md |
+
+### Nuevos comandos CLI
+
+| Comando | Clase | Funcion |
+|---------|-------|---------|
+| `transfers:expire` | `TransferExpire` | Expirar transferencias caducadas (systemd timer cada 5 min) |
+| `ipfs:reconcile` | `IpfsReconcile` | Sincronizar documentos entre BD e IPFS privado |
+
+### Totales verificados
+
+```text
+Controladores REST:  14 (nuevo: Api\DocsController)
+Controladores Web:   6
+Comandos CLI:        5 (nuevos: TransferExpire, IpfsReconcile)
+Rutas totales:       75+
+Tests:               284 tests, 707 assertions, 33 archivos
+ADRs:                27 (7 nuevos: 021-027)
+Systemd units:       3 services + 3 timers
+```
+
+### Referencias
+
+- CHANGELOG: [CHANGELOG.md#180---2026-07-16](./CHANGELOG.md#180---2026-07-16)
+- Version: [VERSION.md](./VERSION.md)
+- State: [.opencode/openspec/.state.yaml](./.opencode/openspec/.state.yaml)
+- OpenAPI spec: [docs/api/marachain-v1.yaml](./docs/api/marachain-v1.yaml)
 
 ---
 

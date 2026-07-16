@@ -1,6 +1,6 @@
 # Installation Guide
 
-> **Version:** 1.7.0 | **Last Updated:** 2026-07-16
+> **Version:** 1.8.0 | **Last Updated:** 2026-07-16
 
 Guia paso a paso para instalar y ejecutar MARAChain en tu entorno local o VPS de produccion.
 
@@ -255,7 +255,7 @@ php spark serve --port=8080
 ### 10. Run Tests
 
 ```bash
-# Todos los tests (~500 assertions en 33 archivos)
+# Todos los tests (284 tests, 707 assertions en 33 archivos)
 php vendor/bin/phpunit
 
 # Solo tests unitarios
@@ -277,7 +277,7 @@ PHPUnit 10.5.x by Sebastian Bergmann and contributors.
 
 Time: 00:XX.XXX, Memory: XX.00 MB
 
-OK (XXX tests, ~500 assertions)
+OK (284 tests, 707 assertions)
 ```
 
 ### 11. Test API Endpoints
@@ -443,6 +443,24 @@ curl -I https://marachain.example.com/ | grep -E "HTTP/|X-"
 - [ ] Rollback plan documentado
 - [ ] Logs funcionando (`writable/logs/`)
 - [ ] `display_errors = Off` en php.ini
+- [ ] Systemd workers instalados y activos (3 services + 3 timers)
+- [ ] IPFS cluster configurado (si aplica)
+
+### Systemd Workers Setup (Produccion)
+
+```bash
+# Copiar e instalar systemd units
+sudo cp scripts/systemd/*.service /etc/systemd/system/
+sudo cp scripts/systemd/*.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now marachain-notifications.timer
+sudo systemctl enable --now marachain-ledger-seal.timer
+sudo systemctl enable --now marachain-transfers-expire.timer
+
+# Verificar estado
+systemctl list-timers marachain-*
+systemctl status marachain-notifications.service
+```
 
 ---
 
@@ -458,7 +476,7 @@ nano .env                                    # Configurar MySQL + encryption.key
 php spark migrate
 php spark shield:setup                       # Configurar SHIELD auth
 php spark serve                              # http://localhost:8080
-php vendor/bin/phpunit                       # ~500 assertions
+php vendor/bin/phpunit                       # 284 tests, 707 assertions
 
 # ── Comandos utiles ──
 php spark list                               # Listar comandos
@@ -484,10 +502,16 @@ php spark shield:user create                 # Crear usuario
 php spark ledger:genesis                     # Bloque genesis
 php spark ledger:seal                        # Sellar evidencias
 php spark notifications:send                 # Enviar notificaciones multi-canal
+php spark transfers:expire                   # Expirar transferencias caducadas
+php spark ipfs:reconcile                     # Sincronizar docs con IPFS privado
 
 # ── Testing ──
-php vendor/bin/phpunit                       # Todos los tests
+php vendor/bin/phpunit                       # Todos los tests (284 tests)
 php vendor/bin/phpunit --testsuite unit      # Unit tests
 php vendor/bin/phpunit --filter UserModel    # Tests filtrados
 php vendor/bin/phpunit --coverage-text       # Cobertura
+
+# ── API Documentation ──
+# Swagger UI (desarrollo): http://localhost:8080/api/docs
+# OpenAPI spec publica: http://localhost:8080/api.yaml
 ```

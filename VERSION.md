@@ -3,7 +3,7 @@
 ## Current Version
 
 ```
-Version:      1.7.0
+Version:      1.8.0
 Release Date: 2026-07-16
 Status:       Development (pre-alpha)
 Codename:     Genesis
@@ -58,6 +58,7 @@ PATCH — Bug fixes: backward-compatible fixes, security patches,
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
+| [1.8.0](./CHANGELOG.md#180---2026-07-16) | 2026-07-16 | Pre-alpha | OpenAPI 3.1 + Swagger UI, IPFS privado, Merkle proofs, systemd workers, Bootstrap 5.3 + PWA, health check ampliado, PHP 8.5, PHPStan CI4, 284 tests (707 assertions) |
 | [1.7.0](./CHANGELOG.md#170---2026-07-16) | 2026-07-16 | Pre-alpha | Documentation completion, OpenSpec state sync, Phase 4 validation finalization, TimestampService, 17th migration |
 | [1.6.0](./CHANGELOG.md#160---2026-07-16) | 2026-07-16 | Pre-alpha | Settings table, context column, api-auth filter, notification outbox model, new service/web tests |
 | [1.5.0](./CHANGELOG.md#150---2026-07-14) | 2026-07-14 | Pre-alpha | Notification system: multi-channel outbox (Email, WhatsApp, Telegram, SMS), Provider pattern, CLI worker, global accounts |

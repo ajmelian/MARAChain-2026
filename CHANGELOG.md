@@ -10,24 +10,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- IPFS private cluster storage integration
 - Authentication hardening (P1-1: FNMT login notification, P1-2: TOTP reuse prevention, P1-3: SHIELD session config compliance)
 - Document transfer complete flow (P1-4: detail view mock data, P1-5: accept/reject web UI)
 - Transactional notification outbox (P1-7: atomic insert with business operations)
 - Ed25519 signatures for ledger blocks (P2-5: replace placeholder HMAC)
-- Merkle proofs for evidence inclusion verification (P2-6)
 - CSP hardening: remove `unsafe-inline` (P2-1)
 - Additional security headers: Cross-Origin-Opener-Policy, Cross-Origin-Embedder-Policy (P2-2)
 - Organization/tenant support (multi-tenancy)
 - Playwright E2E test suite (65 scenarios)
-- IPFS worker (`Commands/IpfsReconcile.php`)
 - Queue worker for async operations (P2-9)
-- SonarQube SAST integration (P2-16)
-- JWT/API keys for REST API authentication
 - CSRF protection on all web forms (AP-1 from audit)
 - Session fixation fix in FNMT flow (AP-2 from audit)
 - Replace inline PHP template strings with view files (AP-4 from audit)
 - ADR documents in `docs/adr/` directory (P3-7)
+
+---
+
+## [1.8.0] - 2026-07-16
+
+### Added
+- **OpenAPI 3.1 + Swagger UI**: especificacion `marachain-v1.yaml` (3133 lines, 46 endpoints, 12 tags, 29 schemas) como fuente unica de verdad del contrato API. `Api\DocsController` sirve Swagger UI en `GET /api/docs` (solo desarrollo). Spec publico en `/api.yaml`.
+- **IPFS privado (cluster)**: implementacion completa (IP-1 a IP-6). `StorageService` ahora persiste ciphertext en IPFS privado ademas de MySQL. `Commands/IpfsReconcile.php` (`php spark ipfs:reconcile`) sincroniza documentos entre BD e IPFS. Columna `documents.ipfs_cid` activa. Cluster IPFS privado con acceso solo desde nodos autorizados.
+- **Merkle proofs** (S-2): `LedgerService::generateProof(eventId)` genera prueba de inclusion criptografica con `siblings[]` y `directions[]`. Un tercero puede verificar inclusion sin descargar el ledger completo.
+- **Receipt endpoint** (S-4): `GET /timestamps/{hash}/receipt` devuelve recibo JSON con Merkle proof verificable.
+- **Systemd workers** (I-4): 3 service + 3 timer units en `scripts/systemd/`:
+  - `marachain-notifications.service` + `.timer` (cada 1 min)
+  - `marachain-ledger-seal.service` + `.timer` (cada 15 min)
+  - `marachain-transfers-expire.service` + `.timer` (cada 5 min)
+- **TransferExpire command**: `php spark transfers:expire` expira transferencias caducadas via systemd timer.
+- **Health check ampliado** (I-5): `HealthController` ahora reporta `pending_notifications`, SMTP socket test, IPFS API connectivity, y disk space usage (degraded >90%).
+- **Bootstrap 5.3 migracion** (I-2): BS4→BS5.3.3 en las 13 vistas. Clases CSS, data-attributes, y componentes actualizados.
+- **PWA support** (I-2): `manifest.json` (standalone, theme #673ab7) + service worker `sw.js` (cache-first, 14 assets estaticos).
+- **PHPStan CI4** (dev): `codeigniter/phpstan-codeigniter ^2.1`, `phpstan.neon` level 2, `_ide_helper.php` stubs, `phpstan-bootstrap.php`.
+- **SonarQube badges** en README.md: Quality Gate, Reliability, Security, Maintainability, Coverage.
+- **Rate limiting en GET /auth/fnmt** (S-6): `throttle:auth` (6 req/min) aplicado a la ruta GET de autenticacion FNMT. Corrige P2-4 del backlog.
+
+### Changed
+- **PHP version**: `composer.json` requiere `^8.4` (antes `^8.2`). PHP 8.5 en CI (corrige P2-15).
+- **Tests actualizados**: 284 tests, 707 assertions (antes ~500 assertions en 33 archivos).
+- **Controladores REST**: 14 (antes 12). Nuevo: `Api\DocsController`.
+- **CLI Commands**: 5 (antes 4). Nuevos: `TransferExpire`, `IpfsReconcile`.
+- **Recuento de rutas**: 75+ (antes 70+). Nuevas: `/api/docs`, `/api.yaml`, `/timestamps/{hash}/receipt`.
+- **Bootstrap 5.3.3** CSS + JS descargados localmente en `public/assets/plugins/bootstrap/`.
+- Todas las referencias de documentacion cruzada actualizadas para v1.8.0.
+
+### Fixed
+- **P2-4**: Rate limiting en `GET /auth/fnmt` ahora activo (antes solo POST de TOTP tenian throttle).
+- **P2-6**: Merkle proofs implementados via `generateProof()`.
+- **P2-7**: `sealBlock()` ahora invocable automaticamente via systemd timer (cada 15 min).
+- **P2-10**: Archivos systemd creados para workers (notifications, ledger-seal, transfers-expire).
+- **P2-15**: PHP 8.5 en composer.json (antes 8.2).
+- **P2-16**: SonarQube integrado con badges en README.
+
+### Security
+- Rate limiting ampliado a `GET /auth/fnmt` (prevencion de DoS y enumeracion de certificados).
+- IPFS privado: documentos solo accesibles desde nodos autorizados del cluster.
+- Merkle proofs permiten verificacion de integridad sin exposicion del ledger completo.
+- Health check no expone datos sensibles (solo metricas de infraestructura).
+- Systemd workers isolados con restart automatico y logging via journald.
 
 ---
 

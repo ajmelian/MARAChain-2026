@@ -1,6 +1,6 @@
 # Architecture
 
-> **Version:** 1.7.0 | **Date:** 2026-07-16 | **Status:** MVP (Pre-alpha)
+> **Version:** 1.8.0 | **Date:** 2026-07-16 | **Status:** MVP (Pre-alpha)
 
 ## Overview
 
@@ -42,6 +42,13 @@ Domain → sin dependencia de framework
 | ADR-018 | `Helpers/Uuid.php` — DRY UUID generation | Reemplaza `generateUuidV4()` duplicada en 10 archivos por una funcion helper centralizada `generate_uuid_v4()`. Cargada via `BaseController::$helpers = ['uuid']` |
 | ADR-019 | Sistema de notificaciones multi-canal con Provider Pattern | Notificaciones desacopladas por canal (Email, WhatsApp, Telegram, SMS) mediante `NotificationProviderInterface`. Cada canal es un provider independiente con contrato `send()`/`health()`. Outbox transaccional (`notification_requested`) con idempotencia, reintentos con backoff, circuit breaker, y dead-letter. Cuentas globales corporativas (`global_messaging_accounts`) gestionadas por canal y entorno. Los secretos de proveedores residen fuera de `wwwroot/` (`/var/lib/marachain/integrations/`). Stubs para canales futuros permiten desarrollo incremental sin bloquear el nucleo |
 | ADR-020 | Migracion `800000_AddIpfsAndBlockchainIds` — columnas preparatorias para IPFS y DLT | Anade `ipfs_cid` (VARCHAR 128) y `blockchain_anchor_id` (VARCHAR 256) como columnas nullable. Permite desarrollo futuro de almacenamiento IPFS y anclaje blockchain sin nueva migracion de schema. Las columnas son backward-compatible (NULL por defecto) |
+| ADR-021 | IPFS privado (cluster) con reconciliacion automatica | Cluster IPFS privado con `IpfsReconcile` command para sincronizacion periodica. Los documentos cifrados (ciphertext) se almacenan en IPFS via `StorageService`. El CID se persiste en `documents.ipfs_cid`. La reconciliacion verifica integridad cross-referenciando CID en BD vs IPFS. Acceso solo desde nodos autorizados en la red privada |
+| ADR-022 | OpenAPI 3.1 + Swagger UI como documentacion viva de API | Especificacion `marachain-v1.yaml` (3133 lines, 46 endpoints, 12 tags, 29 schemas) generada como fuente unica de verdad del contrato API. `DocsController` sirve Swagger UI en `GET /api/docs` (solo desarrollo). El spec se expone publicamente en `/api.yaml` para integraciones externas |
+| ADR-023 | Systemd workers para tareas periodicas | Workers del sistema gestionados via systemd service + timer units en lugar de cron. `marachain-notifications` (cada 1 min), `marachain-ledger-seal` (cada 15 min), `marachain-transfers-expire` (cada 5 min). Ventajas: logging integrado via journald, restart automatico, isolacion de procesos, configuracion declarativa |
+| ADR-024 | Merkle proofs para verificacion de inclusion | `LedgerService::generateProof(eventId)` genera prueba de inclusion criptografica (Merkle proof) sin necesidad de descargar el ledger completo. Incluye `siblings[]` (hashes hermanos) y `directions[]` (left/right) desde la hoja hasta la raiz. Permite verificacion por terceros con solo el `merkle_root` del bloque |
+| ADR-025 | Health check ampliado con metricas de infraestructura | `HealthController` ahora reporta: `pending_notifications` (colas atascadas), SMTP socket test, IPFS API connectivity, disk space usage (degraded >90%). Sin exponer datos sensibles. Usado por scripts de deploy (smoke test) y monitoreo externo |
+| ADR-026 | Bootstrap 5.3 migracion + PWA | Migracion completa de BS4→BS5.3.3 en las 13 vistas. Clases CSS, data-attributes, y componentes actualizados. PWA con `manifest.json` (standalone, theme #673ab7) y service worker `sw.js` (cache-first, 14 assets estaticos). Permite instalacion como app nativa y funcionamiento offline parcial |
+| ADR-027 | Rate limiting en GET /auth/fnmt | `throttle:auth` (6 req/min) aplicado a la ruta GET de autenticacion FNMT. Previene enumeracion de certificados y DoS en el endpoint mTLS. Complementa el rate limiting ya existente en POST de TOTP |
 
 ## Component Diagram
 
@@ -55,19 +62,18 @@ Domain → sin dependencia de framework
 │  │ UserController   │  │ AuthCtrl     │  │ ledger:genesis            │   │
 │  │ DeviceCtrl       │  │ FnmtCtrl     │  │ ledger:seal               │   │
 │  │ DocumentCtrl     │  │ TransfersCtrl│  │ notifications:send        │   │
-│  │ DocumentUploadCtrl│ │ ContactsCtrl │  │                           │   │
-│  │ TransferCtrl     │  │ ProfileCtrl  │  └───────────┬───────────────┘   │
-│  │ SignatureCtrl    │  │ BaseWebCtrl  │              │                   │
-│  │ EvidenceCtrl     │  │              │              ▼                   │
+│  │ DocumentUploadCtrl│ │ ContactsCtrl │  │ transfers:expire          │   │
+│  │ TransferCtrl     │  │ ProfileCtrl  │  │ ipfs:reconcile            │   │
+│  │ SignatureCtrl    │  │ BaseWebCtrl  │  └───────────┬───────────────┘   │
+│  │ EvidenceCtrl     │  │              │              │                   │
 │  │ LedgerCtrl       │  └──────┬───────┘    ┌──────────────────┐         │
 │  │ ContactCtrl      │         │            │    Models         │         │
 │  │ NotifCtrl        │         │            │ (Query Builder)   │         │
 │  │ TimestampCtrl    │         │            └────────┬─────────┘         │
-│  │ HealthCtrl       │         │            └────────┬─────────┘         │
-│  └────────┬─────────┘         │                     │                   │
-│           │                   │                     ▼                   │
-│           ▼                   │            ┌──────────────────┐         │
-│  ┌────────────────┐           │            │   Migrations     │         │
+│  │ HealthCtrl       │         │                     │                   │
+│  │ Api\DocsCtrl     │         │                     ▼                   │
+│  │ (Swagger UI)     │         │            ┌──────────────────┐         │
+│  └────────┬─────────┘         │            │   Migrations     │         │
 │  │   Validation   │           │            │  (CI4 Forge)     │         │
 │  │   9 groups +   │           │            │  17 migrations   │         │
 │  │   CustomRules  │           │            └────────┬─────────┘         │
@@ -141,20 +147,27 @@ Domain → sin dependencia de framework
    │  charset utf8mb4
    │  Ciphertext almacenado en columna documents.ciphertext
    ▼
-6. IPFS (documentos cifrados) — preparado via ipfs_cid column
+6. IPFS (documentos cifrados) — ACTIVE via ipfs_cid column + IpfsReconcile
+   │  Cluster privado con reconciliacion automatica
    │  Solo el destinatario puede descifrar
    │  (clave envuelta en sobre criptografico)
    ▼
 7. Ledger (evidencias append-only)
    │  Bloques con Merkle tree
+   │  Merkle proofs verificables (S-2: generateProof)
    │  Firmas criptograficas por bloque
    │  Evidencias registradas via EvidenceService → LedgerService
    ▼
-8. Notifications (multi-canal, outbox transaccional)
-   │  notification_requested → CLI worker
+8. Notifications (multi-canal, systemd timer cada 1 min)
+   │  notification_requested → CLI worker via systemd
    │  Provider pattern: Email (SMTP), WhatsApp, Telegram, SMS
    │  Cuentas globales corporativas (global_messaging_accounts)
    │  Secretos en /var/lib/marachain/integrations/
+   ▼
+9. API Documentation (Swagger UI)
+   │  OpenAPI 3.1 spec en docs/api/marachain-v1.yaml
+   │  Swagger UI en GET /api/docs (solo desarrollo)
+   │  Spec publico en /api.yaml
 ```
 
 ## Directory Tree (`wwwroot/`)
@@ -166,6 +179,8 @@ wwwroot/
 │   │   ├── LedgerGenesis.php          # ledger:genesis — crear bloque genesis
 │   │   ├── LedgerSeal.php             # ledger:seal — sellar evidencias en bloque
 │   │   ├── NotificationsCommand.php   # notifications:send — procesar notificaciones multi-canal
+│   │   ├── TransferExpire.php         # transfers:expire — expirar transferencias caducadas
+│   │   ├── IpfsReconcile.php          # ipfs:reconcile — sincronizar documentos con IPFS privado
 │   │   └── NotificationSend.php       # [legacy] notification:send — reemplazado por NotificationsCommand
 │   ├── Config/
 │   │   ├── App.php                    # Configuracion general de la aplicacion
@@ -201,6 +216,9 @@ wwwroot/
 │   │   ├── ContactController.php      # CRUD (5 endpoints)
 │   │   ├── NotificationController.php # index, show (2 endpoints)
 │   │   ├── TimestampController.php    # request, show (2 endpoints)
+│   │   ├── HealthController.php       # GET /health — health check ampliado
+│   │   ├── Api/
+│   │   │   └── DocsController.php     # GET /api/docs — Swagger UI (solo desarrollo)
 │   │   └── Web/
 │   │       ├── AuthController.php     # login, register, logout (SHIELD)
 │   │       ├── BaseWebController.php  # render(), shared layout helpers
@@ -372,6 +390,8 @@ Comandos CLI accesibles via `php spark`:
 | `ledger:genesis` | `LedgerGenesis` | Crea el bloque genesis (#1) del ledger |
 | `ledger:seal` | `LedgerSeal` | Sella evidencias pendientes en un nuevo bloque |
 | `notifications:send` | `NotificationsCommand` | Procesa notificaciones multi-canal desde el outbox transaccional |
+| `transfers:expire` | `TransferExpire` | Expira transferencias caducadas (systemd timer cada 5 min) |
+| `ipfs:reconcile` | `IpfsReconcile` | Sincroniza documentos cifrados entre BD e IPFS privado |
 
 ### Web Controllers (`app/Controllers/Web/`)
 
@@ -393,7 +413,9 @@ Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
 | Metodo | Ruta | Controlador | Descripcion |
 |--------|------|-------------|-------------|
 | GET | `/` | `Home::index` | Welcome page |
-| GET | `/health` | `HealthController::index` | Health check (publico) |
+| GET | `/health` | `HealthController::index` | Health check (publico, ampliado con SMTP/IPFS/disk) |
+| GET | `/api/docs` | `Api\DocsController::index` | Swagger UI (solo desarrollo) |
+| GET | `/api.yaml` | (static) | OpenAPI 3.1 spec (publico) |
 | **Auth (Web — rate-limited via throttle:auth)** | | | |
 | GET | `/login` | `Web\AuthController::login` | Login form |
 | POST | `/login` | `Web\AuthController::login` | Process login |
@@ -454,6 +476,7 @@ Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
 | **Timestamp (api-auth)** | | | |
 | POST | `/timestamps` | `TimestampController::request` | Solicitar sello de tiempo |
 | GET | `/timestamps/{id}` | `TimestampController::show` | Ver sello de tiempo |
+| GET | `/timestamps/{hash}/receipt` | `TimestampController::receipt` | Recibo JSON con Merkle proof |
 | **Transfers (Web — session-protected)** | | | |
 | GET | `/inbox` | `Web\TransfersController::inbox` | Bandeja de entrada |
 | GET | `/outbox` | `Web\TransfersController::outbox` | Bandeja de salida |
@@ -470,7 +493,7 @@ Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
 | GET | `/profile` | `Web\ProfileController::index` | Perfil de usuario |
 | GET | `/totp/setup` | `Web\AuthController::totpSetup` | Configurar TOTP |
 
-**Total: 70+ rutas registradas (39+ REST API + 1 health + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 2 timestamp + 1 home)**
+**Total: 75+ rutas registradas (41+ REST API + 1 health + 1 docs + 5 auth + 5 FNMT + 10 web session + 6 web contacts + 2 profile + 3 timestamp + 1 home + 1 api.yaml)**
 
 ## Database
 
@@ -532,11 +555,11 @@ Controladores para la interfaz web HTML (Bootstrap 5 + Alpino Admin Dashboard):
 ### Suite actual
 
 - **33 archivos de test**: 9 model + 15 controller + 6 service + 3 otros
-- **~500 assertions**
+- **284 tests, 707 assertions**
 - **6 service tests**: LedgerService, StorageService, EvidenceService, X509Service, FnmtIdentityProvider, EncryptionService
-- **15 controller tests**: 9 REST + 5 Web + Health
+- **15 controller tests**: 10 REST + 4 Web + Health
 - **9 model tests**: todos los modelos del dominio
-- **14 LedgerService tests**: Merkle tree, genesis, sealing, chain verification, tamper detection
+- **14 LedgerService tests**: Merkle tree, genesis, sealing, chain verification, tamper detection, Merkle proofs
 
 ### Ejecucion
 

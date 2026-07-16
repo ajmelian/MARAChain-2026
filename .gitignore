@@ -40,3 +40,4 @@ resources/frontend/alpino/original/
 
 # ── Node (if added later) ──
 node_modules/
+.env.continue.local

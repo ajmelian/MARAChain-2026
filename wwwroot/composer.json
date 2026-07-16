@@ -15,7 +15,7 @@
         "source": "https://github.com/ajmelian/MARAChain-2026"
     },
     "require": {
-        "php": "^8.2",
+        "php": "^8.5",
         "codeigniter4/framework": "^4.7",
         "codeigniter4/settings": "^2.3",
         "codeigniter4/shield": "^1.3"

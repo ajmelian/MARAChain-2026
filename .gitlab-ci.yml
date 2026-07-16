@@ -13,7 +13,7 @@ cache:
 # ── PHPUnit Tests ────────────────────────────────────────────────
 test:phpunit:
   stage: test
-  image: php:8.3-cli
+  image: php:8.5-cli
   before_script:
     - apt update && apt install -y libzip-dev unzip git libsqlite3-dev
     - docker-php-ext-install zip pdo pdo_sqlite
@@ -28,7 +28,7 @@ test:phpunit:
 # ── Composer Security Audit ──────────────────────────────────────
 security:composer:
   stage: test
-  image: php:8.3-cli
+  image: php:8.5-cli
   script:
     - curl -sS https://getcomposer.org/installer | php
     - cd wwwroot && php ../composer.phar audit --format=json > audit.json
@@ -38,7 +38,7 @@ security:composer:
 # ── SAST – PHPStan Static Analysis ───────────────────────────────
 sast:phpstan:
   stage: sast
-  image: php:8.3-cli
+  image: php:8.5-cli
   before_script:
     - apt update && apt install -y libzip-dev unzip git
     - docker-php-ext-install zip

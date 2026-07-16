@@ -41,6 +41,15 @@
       "headers": {
         "Authorization": "Bearer ${env:ATLASSIAN_API_TOKEN}"
       }
+    },
+    "memory": {
+      "type": "local",
+      "command": "/home/aythami/.nvm/versions/node/v22.23.1/bin/claude-memory-mcp",
+      "args": [
+        "serve",
+        "--vault-path", ".memory"
+      ],
+      "timeout": 10000
     }
   }
 }

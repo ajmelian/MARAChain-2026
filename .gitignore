@@ -40,4 +40,8 @@ resources/frontend/alpino/original/
 
 # ── Node (if added later) ──
 node_modules/
+
+# ── Local memory vault ──
+.memory/
+.mcp.json
 .env.continue.local
